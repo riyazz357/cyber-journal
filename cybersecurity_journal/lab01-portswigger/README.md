@@ -1,4 +1,4 @@
-# 🛡️ Lab Report: SQL Injection (Retrieval of Hidden Data)
+# Lab Report: SQL Injection (Retrieval of Hidden Data)
 
 | **Platform** | PortSwigger Web Security Academy |
 | :--- | :--- |
@@ -9,12 +9,12 @@
 
 ---
 
-## 🎯 Objective
+## Objective
 The goal of this lab is to display product details that are currently hidden (unreleased) by the application. The application filters products based on categories but uses an unsafe SQL query, allowing us to manipulate the `WHERE` clause.
 
 ---
 
-## 🔍 Vulnerability Analysis
+## Vulnerability Analysis
 The application takes user input from the URL (`category` parameter) and concatenates it directly into the backend SQL query without validation.
 
 **Vulnerable Backend Logic:**
