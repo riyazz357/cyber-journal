@@ -35,6 +35,7 @@ We want to extract usernames and passwords from the `users` table.
 
 ## Steps to Reproduce
 md
+
 1. Intercept Request: Use Burp Suite to intercept the "Check Stock" request.
 
 2. Send to Repeater: Move the request to the Repeater tab for modification.
