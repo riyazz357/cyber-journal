@@ -17,7 +17,7 @@ The goal is to exploit a **Blind SQL Injection** vulnerability in the `TrackingI
 ## Discovery & Analysis
 
 ### 1. Confirming the Vulnerability
-We injected Boolean conditions into the `TrackingId` cookie to observe the application's behavior.
+i injected Boolean conditions into the `TrackingId` cookie to observe the application's behavior.
 
 * **TRUE Condition:**
     ```http
@@ -33,12 +33,12 @@ We injected Boolean conditions into the `TrackingId` cookie to observe the appli
 **Conclusion:** The application is vulnerable to Boolean-based Blind SQLi.
 
 ### 2. Database Identification
-We tested specific syntaxes to identify the database type.
+i tested specific syntaxes to identify the database type.
 * Payload: `' AND (SELECT 'a')='a'--` (PostgreSQL syntax).
 * *Result:* TRUE response. Confirmed database is **PostgreSQL**.
 
 ### 3. Verifying Target Table & User
-Before extraction, we confirmed the existence of the `users` table and the `administrator` user.
+Before extraction, i confirmed the existence of the `users` table and the `administrator` user.
 ```sql
 ' AND (SELECT 'x' FROM users WHERE username='administrator')='x'--
 ```
