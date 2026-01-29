@@ -82,3 +82,14 @@ Status Code: 500
 Any request that resulted in a 500 Error indicated that the guessed character at that specific position was correct.
 
 Extracted Password: [Your_Extracted_Password_Here]
+
+## Remediation
+To fix this vulnerability, the following security practices must be implemented:
+
+Parameterized Queries (Prepared Statements): Developers should use Prepared Statements (e.g., PreparedStatement in Java) to ensure user input is treated as data, not executable code. This prevents the interpreter from executing injected SQL commands.
+
+Input Validation: Implement strict allow-listing for the TrackingId cookie. Ensure it only accepts alphanumeric characters and rejects special characters like ', |, or -.
+
+Generic Error Handling: Configure the web server to return generic error messages. While this doesn't fix the injection, it prevents attackers from using verbose error messages for reconnaissance (though blind error-based attacks may still work).
+
+Documentation by: *riyaz*
