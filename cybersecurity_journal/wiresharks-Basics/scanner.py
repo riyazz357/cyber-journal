@@ -23,7 +23,12 @@ try:
         
         if result == 0:
             print(f"Port {port}: OPEN")
-        
+            try:
+                s.send(b"Hello\r\n")
+                banner = s.recv(1024) # 1024 bytes receive karo
+                print(f"   Service: {banner.decode().strip()}")
+            except:
+                print("   Service: Unknown")
         s.close()
 
 except KeyboardInterrupt:
