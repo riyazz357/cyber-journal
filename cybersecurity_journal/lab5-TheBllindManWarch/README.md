@@ -86,3 +86,5 @@ Any payload causing a response time of ~10,000ms indicated a character match.
 2. Input Validation: Strictly whitelist expected characters for cookies (e.g., alphanumeric only).
 
 3. WAF Configuration: Configure Web Application Firewalls to detect and block SQL keywords like pg_sleep, WAITFOR, and CASE WHEN.
+
+# Documented by: *Riyaz*
