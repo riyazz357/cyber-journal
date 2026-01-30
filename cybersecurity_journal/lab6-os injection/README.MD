@@ -67,3 +67,5 @@ storeId=1|whoami
 2. Input Validation: Strictly validate user input against a whitelist (e.g., ensure storeId is only an integer).
 
 3. Parameterized Functions: If system calls are necessary, use functions that separate the command from the arguments (like subprocess.run() in Python with shell=False).
+
+## Documented By:*Riyaz*
