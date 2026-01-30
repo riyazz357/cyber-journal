@@ -44,3 +44,83 @@ I performed an "Aggressive Scan" using the command nmap -A. This scan went beyon
 2. Handling Encryption (OpenSSL) i learned that Netcat has a limitation: it communicates in plain text. When i tried to connect to Bandit Level 15 on port 30001, i failed because that port was using SSL/TLS encryption (just like HTTPS). To talk to this secure port, i used the OpenSSL tool. The command openssl s_client -connect localhost:30001 performed the necessary "Handshake" to handle encryption, allowing us to send the password safely. This taught us that different ports speak different "languages" (Plain vs. Encrypted), and i need the right tool for each.
 
 3. Banner Grabbing (The Information Leak) Finally, i upgraded our Python Port Scanner to perform "Banner Grabbing." By sending a simple "Hello" message to an open port, I tricked the server into replying with its details. Our script revealed that the target was running "OpenSSH 6.6.1" and "Apache 2.4.7" on an Ubuntu server. This technique is critical for hackers because identifying the exact software version allows them to search for specific vulnerabilities (exploits) associated with that old version, making the server an easy target.
+
+
+# Day 5: Wireshark Level 1 - Packet Anatomy
+
+##  Overview
+Today, I moved beyond just capturing traffic to performing **"Packet Surgery."** I learned that a network packet is like a **Matryoshka Doll** (layers inside layers). To understand network traffic, we must analyze the headers of each layer in Wireshark's "Packet Details" pane.
+
+---
+
+## Layer 2: Ethernet II (The Hardware)
+This layer handles local delivery (LAN). It tells us **who** is talking on the physical network.
+
+### 1. MAC Address & OUI
+* **Concept:** The first 6 digits of a MAC Address are called the **OUI** (Organizationally Unique Identifier).
+* **Usage:** This allows a hacker or analyst to identify the **Manufacturer** of the device (e.g., Apple, Dell, Cisco).
+* **Why it matters:** Identifying the hardware helps in mapping the network infrastructure.
+
+---
+
+##  Layer 3: Internet Protocol v4 (The OS & Distance)
+This layer handles global delivery. It contains crucial metadata about the source and destination.
+
+### 1. Time To Live (TTL)
+* **Concept:** A countdown number that decreases by **1** every time the packet crosses a Router.
+* **Math:** `Starting Value` - `Current Value` = `Number of Routers crossed`.
+* ** OS Fingerprinting:** We can guess the Operating System based on the initial TTL value:
+    * **TTL ~64:** Linux / Android / MacOS
+    * **TTL ~128:** Windows
+    * **TTL ~255:** Cisco / Network Gear
+
+### 2. IP Flags (Fragmentation)
+* **DF (Don't Fragment):** * If `1`: "Do not break me." (Rigid).
+    * If `0`: "You can break me if needed." (Flexible).
+* **MF (More Fragments):** * If `1`: "I am broken, more pieces are coming."
+    * If `0`: "I am complete."
+
+---
+
+##  Layer 4: TCP (The Behavior)
+This layer manages the connection rules, speed, and reliability.
+
+### 1. TCP Flags (The Switches)
+Flags indicate the state of the conversation:
+* **SYN:** "Hello, I want to connect." (Start)
+* **ACK:** "I heard you / Connection established." (Reply)
+* **RST:** "Reset/Cut the connection immediately." (Error/Block)
+* **FIN:** "I am finished, goodbye." (End)
+
+### 2. Window Size (The Speed Limit)
+* **Concept:** Think of this as a **Bucket**. It tells the sender how much empty space the receiver has.
+* **High Value (e.g., 65535):** "I have lots of space, send data fast!"
+* **Zero (0):** "Stop! My buffer is full." (This causes slow internet/lag).
+
+---
+
+## Practical Case Study: My Analysis
+I analyzed a live packet from my network and diagnosed the following:
+
+> **Target Packet Findings:**
+>
+> 1.  **Hardware Identification:** >     * **Observation:** OUI showed "Ruijie Networks".
+>     * **Conclusion:** The device is professional networking gear (likely a Switch/Router).
+>
+> 2.  **OS & Distance:**
+>     * **Observation:** TTL was **123**.
+>     * **Calculation:** Windows default is 128. `128 - 123 = 5`.
+>     * **Conclusion:** The packet came from a **Windows-based system** and traveled through **5 Routers**.
+>
+> 3.  **Connection Health:**
+>     * **Observation:** IP Flags (DF/MF) were **0** (Not Set). Window Size was **1047**.
+>     * **Conclusion:** The connection is flexible (fragmentation allowed) but the device has a small buffer (1047 bytes), suggesting it might be an IoT device or a busy router.
+
+---
+
+## Checklist for Future Analysis
+When inspecting a packet, always check these 4 points:
+- [x] **OUI:** Who made the device?
+- [x] **TTL:** What is the OS and how far is it?
+- [x] **TCP Flags:** Is it a Start (SYN), Reply (ACK), or Error (RST)?
+- [x] **Window Size:** Is the network congested?
