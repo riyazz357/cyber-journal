@@ -124,3 +124,63 @@ When inspecting a packet, always check these 4 points:
 - [x] **TTL:** What is the OS and how far is it?
 - [x] **TCP Flags:** Is it a Start (SYN), Reply (ACK), or Error (RST)?
 - [x] **Window Size:** Is the network congested?
+
+# DAY 6
+
+#  Wireshark Level 2 - Traffic Flow Analysis
+
+##  Overview
+Today, I advanced from analyzing single packets (Anatomy) to understanding the **Life Cycle of a Connection** (Traffic Flow). I used Wireshark to observe how connections are born, how they communicate, and how they die.
+
+---
+
+##  Part 1: TCP - The Reliable Connection
+TCP is polite and formal. It guarantees delivery.
+
+### 1. The Birth (3-Way Handshake)
+Before any data (even encrypted HTTPS) is sent, a 3-step handshake occurs in **Plain Text**.
+* **Step 1 [SYN]:** Client says "Hello, I want to connect."
+* **Step 2 [SYN, ACK]:** Server says "I hear you, and I am ready."
+* **Step 3 [ACK]:** Client says "Connection Established."
+
+> **Hacker Insight:** Even if a website is HTTPS (Secure), the handshake is visible. An attacker can see *who* you are connecting to (IP Address) just by looking at these packets.
+
+### 2. The Death (RST vs FIN)
+Connections can end in two ways:
+* **FIN (Finish):** The polite goodbye. "I am done, bye."
+* **RST (Reset):** The rude hangup. "Cut the line immediately!"
+    * *Observation:* I observed `[RST, ACK]` packets in my capture. This means the server acknowledged my last data but immediately forced the connection to close to save resources.
+
+---
+
+## Part 2: UDP - The Fast Connection (DNS)
+UDP is "fire and forget." It prioritizes speed over reliability.
+
+### 1. DNS Analysis (Port 53)
+I captured DNS traffic (which acts like the internet's phonebook). Unlike TCP, there was **NO Handshake**.
+* **Traffic Pattern:** Just a **Standard Query** followed immediately by a **Standard Response**.
+
+### 2. Record Types (IPv4 vs IPv6)
+Modern systems ask for two types of addresses simultaneously:
+* **Type A:** Requests the **IPv4** address (e.g., `157.240.x.x`).
+* **Type AAAA:** Requests the **IPv6** address.
+    * *Logic:* IPv6 (128-bit) is 4 times larger than IPv4 (32-bit). Hence, "Quad-A".
+    * *Observation:* My capture showed the computer querying for both A and AAAA records for `facebook.com`.
+
+---
+
+## Technical Comparison: TCP vs UDP
+
+| Feature | TCP (Web/HTTPS) | UDP (DNS/Streaming) |
+| :--- | :--- | :--- |
+| **Connection** | **Stateful:** Remembers the connection state. | **Stateless:** No memory of past packets. |
+| **Reliability** | **High:** Resends lost packets. | **Low:** Lost packets are gone forever. |
+| **Speed** | Slower (due to Handshake overhead). | Blazing Fast. |
+| **Wireshark Flags** | `SYN`, `ACK`, `FIN`, `RST` visible. | No Flags, just `Query` & `Response`. |
+
+---
+
+## Key Learnings
+- [x] **HTTPS isn't 100% hidden:** The handshake and IP headers are always visible in plain text.
+- [x] **RST isn't a Retransmission:** RST means "Reset/Kill Connection", whereas Retransmission means "Resend Data".
+- [x] **IPv6 in Action:** Saw `AAAA` records, confirming modern networks prefer IPv6 when available.
