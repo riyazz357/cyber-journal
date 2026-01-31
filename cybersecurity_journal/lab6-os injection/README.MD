@@ -1,4 +1,4 @@
-# 💻 Lab: OS Command Injection, Simple Case
+# Lab: OS Command Injection, Simple Case
 
 | **Category** | Web Security / OS Command Injection |
 | :--- | :--- |
@@ -9,7 +9,7 @@
 
 ---
 
-## 📖 Conceptual Overview
+##  Conceptual Overview
 
 **OS Command Injection** (also known as Shell Injection) is a web security vulnerability that allows an attacker to execute arbitrary operating system (OS) commands on the server that is running an application.
 
@@ -17,7 +17,7 @@ In this scenario, the application takes user input (Product Store ID) and passes
 
 ---
 
-## 🕵️‍♂️ Phase 1: Analysis & Detection
+##  Phase 1: Analysis & Detection
 
 ### 1. Functionality Check
 The application has a "Check Stock" feature. When a user checks stock for a product, the application sends a POST request with parameters like `productId` and `storeId`.
@@ -35,7 +35,7 @@ I tested the `storeId` parameter to see if it accepts shell metacharacters.
 
 ---
 
-## ⚔️ Phase 2: Exploitation (RCE)
+## Phase 2: Exploitation (RCE)
 
 I successfully executed the `whoami` command to retrieve the current user of the server.
 
