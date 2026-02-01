@@ -184,3 +184,43 @@ Modern systems ask for two types of addresses simultaneously:
 - [x] **HTTPS isn't 100% hidden:** The handshake and IP headers are always visible in plain text.
 - [x] **RST isn't a Retransmission:** RST means "Reset/Kill Connection", whereas Retransmission means "Resend Data".
 - [x] **IPv6 in Action:** Saw `AAAA` records, confirming modern networks prefer IPv6 when available.
+
+
+# Day 7
+## Network Troubleshooting (Wireshark Level 3)
+
+##  Overview
+Today, I learned how to diagnose network health issues. Hacking isn't just about breaking in; it's also about understanding why a connection is failing or slow. I used Wireshark's **Expert Info** and **Graphs** to visualize network errors.
+
+---
+
+##  Common Network Errors (The Red/Black Packets)
+
+### 1. TCP Retransmission (The "Did you hear me?")
+* **Color:** Black Background / Red Text.
+* **Meaning:** I sent a packet, but the server didn't acknowledge it (ACK). So, my computer sent the same packet again.
+* **Cause:** Packet Loss, Weak WiFi, or Network Congestion.
+
+### 2. TCP Duplicate ACK (The "Missing Piece")
+* **Meaning:** The device received packets out of order (e.g., received 1, 2, 4... where is 3?).
+* **Action:** It keeps sending ACKs for packet 2 until packet 3 arrives.
+
+### 3. TCP Zero Window (The "Choke")
+* **Meaning:** The receiver's buffer (bucket) is full.
+* **Message:** `Window size: 0`.
+* **Result:** The connection freezes until the receiver processes the data. This causes extreme lag.
+
+---
+
+##  Visualizing the Chaos (I/O Graphs)
+Instead of reading thousands of packets, I used **Statistics -> I/O Graphs**.
+* **Filter Used:** `tcp.analysis.flags` (Shows only error packets).
+* **Observation:** I intentionally interrupted a download. The graph showed a clear **spike (Error Bar)** at the exact moment of interruption, confirming that retransmissions spiked when the connection was unstable.
+
+---
+
+##  Key Takeaway
+- [x] **Red/Black packets** are warning signs.
+- [x] **Retransmission** means the network is losing data.
+- [x] **Zero Window** means the device is overloaded.
+- [x] **I/O Graphs** are the fastest way to spot network drops over time.
