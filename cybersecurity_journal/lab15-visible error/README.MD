@@ -11,7 +11,7 @@
 
 ## Conceptual Overview
 When an application is configured to display verbose error messages (e.g., for debugging), attackers can intentionally cause a database error that "leaks" sensitive data within the error text.
-* **The Technique (CAST Injection):** We force the database to convert a string (like a password) into an Integer. Since this is impossible, the database throws an error stating: *"Invalid input syntax for integer: 'THE_PASSWORD'"*.
+* **The Technique (CAST Injection):** i force the database to convert a string (like a password) into an Integer. Since this is impossible, the database throws an error stating: *"Invalid input syntax for integer: 'THE_PASSWORD'"*.
 
 
 
@@ -35,7 +35,7 @@ TrackingId=' AND 1=CAST((SELECT password FROM users LIMIT 1) AS INT)--
 
 2. CAST(... AS INT): Forces the type conversion error.
 
-3. LIMIT 1: Ensures we only fetch one record to avoid "more than one row returned" errors.
+3. LIMIT 1: Ensures i only fetch one record to avoid "more than one row returned" errors.
 
 ## Execution Result:
 The server responded with:
