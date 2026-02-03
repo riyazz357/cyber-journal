@@ -1,4 +1,4 @@
-# 📂 Lab: File Path Traversal (Simple Case)
+#  Lab: File Path Traversal (Simple Case)
 
 | **Category** | Web Security / Directory Traversal |
 | :--- | :--- |
@@ -6,7 +6,7 @@
 | **Goal** | Retrieve the content of the `/etc/passwd` file. |
 | **Status** | ✅ Solved |
 
-## 📖 Concept
+##  Concept
 The application loads images using a filename parameter (e.g., `?filename=image.jpg`). It does not validate if the user is requesting a file outside the intended image directory. I use **Relative Path** sequence (`../`) to step back out of the folder and access system files.
 
 ## ⚔️ Exploitation Steps
@@ -17,7 +17,7 @@ The application loads images using a filename parameter (e.g., `?filename=image.
     * Replaced filename with: `../../../etc/passwd`
 4.  **Result:** Server returned the content of the password file (e.g., `root:x:0:0...`).
 
-## 🚀 Payload
+##  Payload
 ```text
 ../../../etc/passwd
 ```
