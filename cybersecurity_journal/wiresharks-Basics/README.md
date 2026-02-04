@@ -224,3 +224,29 @@ Instead of reading thousands of packets, I used **Statistics -> I/O Graphs**.
 - [x] **Retransmission** means the network is losing data.
 - [x] **Zero Window** means the device is overloaded.
 - [x] **I/O Graphs** are the fastest way to spot network drops over time.
+
+# DAY 8
+## Network Attacks - ARP Spoofing (Theory & Experiment)
+
+### Overview
+Today, I moved from just watching network traffic (Passive Analysis) to actually interacting with it (Active Manipulation). I explored a technique called ARP Spoofing, which is the first step to performing a Man-in-the-Middle (MitM) attack.
+
+### The Concept: Why does this work?
+I learned that the ARP protocol (which connects IP addresses to MAC addresses) has a major security weakness: It is too trusting. Devices on a network accept ARP updates without verifying if they are true. This allows anyone on the local network to lie about their identity.
+
+### The Experiment
+I used a Python tool to send fake identity signals to two devices:
+
+I told the Victim (Phone) that "I am the Router."
+
+I told the Router that "I am the Victim." As a result, both devices updated their internal tables and started sending their traffic to my computer instead of communicating directly with each other.
+
+### The Result: The "Black Hole" Effect
+When I ran the experiment, the victim's internet connection stopped immediately. This happened because I had successfully redirected the traffic to my computer, but I had not enabled "IP Forwarding."
+
+Essentially, my computer acted like a wall (or a Black Hole). It received the data packets from the phone but didn't pass them on to the real router, causing the internet to disconnect.
+
+### Key Takeaway
+To turn this into a proper spying attack where the internet keeps working (so I can sniff passwords), I must enable IP Forwarding in the operating system. This will turn my computer from a "Wall" into a "Bridge."
+
+## Disclaimer: This experiment was performed on my own devices for educational purposes only.
