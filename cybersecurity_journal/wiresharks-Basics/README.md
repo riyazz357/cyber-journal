@@ -250,3 +250,35 @@ Essentially, my computer acted like a wall (or a Black Hole). It received the da
 To turn this into a proper spying attack where the internet keeps working (so I can sniff passwords), I must enable IP Forwarding in the operating system. This will turn my computer from a "Wall" into a "Bridge."
 
 ## Disclaimer: This experiment was performed on my own devices for educational purposes only.
+
+
+# Day 9: Network Attacks - IP Forwarding (The Bridge)
+
+##  Overview
+In the previous experiment (Day 8), my ARP Spoofing attack caused the victim to lose internet connectivity. This happened because my computer acted as a "Black Hole," dropping packets intended for the router.
+
+Today, I enabled **IP Forwarding** to fix this. This turned my computer from a "Wall" into a "Bridge," allowing traffic to flow through my machine to the router, successfully establishing a functional **Man-in-the-Middle (MitM)** position.
+
+---
+
+## The Concept: Wall vs. Bridge
+* **Default Behavior (The Wall):** Operating Systems are designed to drop packets that are not addressed to them for security and efficiency.
+* **IP Forwarding (The Bridge):** By enabling this feature, I instructed my OS to forward packets intended for other devices (like the Router) instead of deleting them.
+
+---
+
+##  The Fix (Enabling Forwarding)
+I used the following command to enable packet forwarding on my network adapter:
+
+**For Windows (PowerShell Administrator):**
+```powershell
+Set-NetIPInterface -Forwarding Enabled
+```
+## Results
+After enabling forwarding and re-running the ARP Spoofing script:
+
+1. Victim Experience: The victim's phone maintained a stable internet connection (YouTube/Browsing worked perfectly).
+
+2. Attacker Access: I verified using Wireshark that the victim's traffic was flowing through my interface.
+
+3. Conclusion: The Man-in-the-Middle attack is now active and invisible.
