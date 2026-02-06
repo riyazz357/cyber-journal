@@ -16,7 +16,6 @@ def process_packet(packet):
         if target_site in qname.decode():
             print("[+] Spoofing Target: " + target_site)
             
-            # --- THE HACK ---
             # Answer ko badal kar APNI IP daal do
             # 192.168.1.X = Tumhari Kali Machine ki IP
             my_ip = "192.168.1.15" 

@@ -282,3 +282,52 @@ After enabling forwarding and re-running the ARP Spoofing script:
 2. Attacker Access: I verified using Wireshark that the victim's traffic was flowing through my interface.
 
 3. Conclusion: The Man-in-the-Middle attack is now active and invisible.
+
+
+#  Day 10: 
+## Packet Sniffing (Building a Custom Wireshark)
+
+##  Overview
+After establishing a Man-in-the-Middle (MitM) position using ARP Spoofing, the next step is to intercept and read the data flowing through the network. Today, I built a custom **Packet Sniffer** using Python and Scapy to extract sensitive information like **URLs** and **Passwords** from HTTP traffic.
+
+---
+
+##  The Concept: Sniffing
+* **Wireshark** is great for analysis, but it captures too much noise.
+* **Custom Sniffer:** By writing a script, I can filter specifically for **HTTP Requests** and **POST Data** (where passwords live), automating the process of information gathering.
+
+---
+
+##  The Code (`packet_sniffer.py`)
+I used the `scapy` library to sniff packets on the interface.
+
+### Key Logic:
+1.  **Capture:** Sniff packets flowing through the adapter.
+2.  **Filter:** Check if the packet has an `HTTP Request` layer.
+3.  **Extract URL:** Combine `Host` + `Path` to see where the victim is surfing.
+4.  **Extract Credentials:** Look into the `Raw` layer (Load) for keywords like `username`, `password`, `login`, etc.
+
+*(Note: The full Python code is stored in the repo file `packet_sniffer.py`)*
+
+---
+
+## The Experiment
+
+### Setup
+1.  **Attacker Machine:** Running `arp_spoofer.py` (Terminal 1) and `packet_sniffer.py` (Terminal 2).
+2.  **Victim Machine:** A smartphone connected to the same WiFi.
+3.  **Target Site:** `http://testphp.vulnweb.com/login.php` (A secure testing environment for HTTP).
+
+### Observations
+* As soon as the victim clicked "Login" on the test website, my terminal displayed the data instantly.
+* **Output:**
+    ```text
+    [+] URL Visited: [testphp.vulnweb.com/login.php](https://testphp.vulnweb.com/login.php)
+    [!!!] POSSIBLE PASSWORD FOUND: uname=admin&pass=secret123
+    ```
+
+---
+
+## ✅ Key Takeaway
+- [x] **HTTP is Insecure:** Data sent over HTTP is in plain text. Anyone on the same network can read it easily.
+- [x] **Automation:** Python allows us to automate the tedious task of searching through packets in Wireshark.
