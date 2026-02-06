@@ -328,6 +328,6 @@ I used the `scapy` library to sniff packets on the interface.
 
 ---
 
-## ✅ Key Takeaway
+## Key Takeaway
 - [x] **HTTP is Insecure:** Data sent over HTTP is in plain text. Anyone on the same network can read it easily.
 - [x] **Automation:** Python allows us to automate the tedious task of searching through packets in Wireshark.
