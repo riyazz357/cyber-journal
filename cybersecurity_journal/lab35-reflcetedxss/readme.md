@@ -1,6 +1,4 @@
 
-#### 📄 File 2: `XSS_Reflected_Attribute_Context.md`
-
 ```markdown
 # Lab: Reflected XSS into attribute with angle brackets HTML-encoded
 
