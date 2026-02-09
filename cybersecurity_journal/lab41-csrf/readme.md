@@ -26,7 +26,7 @@ i can do this using a JavaScript redirect or an invisible image tag.
 </script>
 ```
 ## Steps to Reproduce
-1. Intercept and Analyze:
+### 1. Intercept and Analyze:
 
 * Log in to your account (wiener:peter).
 
@@ -34,7 +34,7 @@ i can do this using a JavaScript redirect or an invisible image tag.
 
 * Intercept this request in Burp Suite. You will see it is a POST request with a csrf parameter in the body.
 
-2. Test for Method Vulnerability:
+### 2. Test for Method Vulnerability:
 
 * Send the intercepted request to Burp Repeater (Ctrl+R).
 
@@ -44,7 +44,7 @@ i can do this using a JavaScript redirect or an invisible image tag.
 
 Click Send. If you get a 302 Found (redirect) instead of a CSRF error, the vulnerability exists!
 
-3. Craft the Exploit:
+### 3. Craft the Exploit:
 
 * Go to the Exploit Server.
 
@@ -52,7 +52,7 @@ Click Send. If you get a 302 Found (redirect) instead of a CSRF error, the vulne
 
 * Replace YOUR-LAB-ID with your actual lab instance ID.
 
-4. Deliver and Conquer:
+### 4. Deliver and Conquer:
 
 * Click Store.
 

@@ -331,3 +331,99 @@ I used the `scapy` library to sniff packets on the interface.
 ## Key Takeaway
 - [x] **HTTP is Insecure:** Data sent over HTTP is in plain text. Anyone on the same network can read it easily.
 - [x] **Automation:** Python allows us to automate the tedious task of searching through packets in Wireshark.
+
+
+
+#  Authentication Attacks - Brute Force with Hydra
+
+##  Overview
+After understanding logic-based attacks (like SQL Injection), the next step is breaking through the "Front Door": **Authentication**.
+Today, I learned how to perform **Brute Force Attacks** using **Hydra**, a legendary fast network logon cracker that supports over 50 protocols (including SSH, FTP, HTTP, etc.).
+
+---
+
+##  Key Concepts
+
+### 1. Brute Force vs. Dictionary Attack
+* **Brute Force:** Trying every possible character combination (aaa, aab, aac...). It is extremely slow and inefficient.
+* **Dictionary Attack:** Using a list of common passwords (e.g., "password", "123456", "soccer"). This is what hackers actually use because humans are predictable.
+
+### 2. The Weapon: `rockyou.txt`
+Kali Linux includes a famous wordlist containing **14 million leaked passwords** from real data breaches.
+* **Location:** `/usr/share/wordlists/rockyou.txt.gz`
+* **Setup Command (Unzip first):**
+    ```bash
+    sudo gzip -d /usr/share/wordlists/rockyou.txt.gz
+    ```
+
+---
+
+##  Hydra Syntax (The 4 Magic Flags)
+Hydra's logic relies on 4 case-sensitive flags. Memorizing these covers 90% of use cases:
+
+| Flag | Meaning | Usage Scenario |
+| :--- | :--- | :--- |
+| **`-l`** | **Single User** | When you know the target username (e.g., `-l admin`). |
+| **`-L`** | **User List** | When you want to try a list of users (`-L users.txt`). |
+| **`-p`** | **Single Pass** | When you want to test one specific password (`-p password123`). |
+| **`-P`** | **Pass List** | When using a wordlist (`-P rockyou.txt`). |
+
+---
+
+##  Attack Scenarios
+
+### Scenario 1: Cracking SSH (Infrastructure)
+Targeting the **SSH service (Port 22)** on a server. This is the most common administrative backdoor.
+
+**Command:**
+```bash
+hydra -l root -P /usr/share/wordlists/rockyou.txt 192.168.1.15 ssh -t 4
+```
+
+* -l root: We assume the username is 'root'.
+
+* -P ...: Use the RockYou wordlist.
+
+* 192.168.1.15: The target IP.
+
+* ssh: The protocol we are attacking.
+
+* -t 4: Threads (Speed). Limits parallel tasks to 4 to avoid crashing the server.
+
+## Scenario 2: Cracking Web Forms (HTTP POST)
+Targeting a website's Login Page. This is more complex because we must tell Hydra the specific form parameters.
+
+### Command:
+
+```Bash
+hydra -l admin -P rockyou.txt 192.168.1.15 http-post-form "/login.php:user=^USER^&pass=^PASS^:F=Login failed"
+```
+* http-post-form: The protocol (Web Form).
+
+* "/login.php:...": The attack string has 3 parts separated by colons (:):
+
+    1. Page: /login.php (Where to send the request).
+
+    2. Body: user=^USER^&pass=^PASS^ (Hydra replaces ^USER^ and ^PASS^ with values from the list).
+
+    3. Error Message: F=Login failed (Tells Hydra: "If the page says 'Login failed', the password was wrong").
+
+## Scenario 3: Password Spraying (Stealth Mode)
+Instead of trying 1000 passwords on 1 user (which locks the account), we try 1 password on 1000 users.
+
+### Command:
+
+```Bash
+hydra -L users.txt -p "Summer2024!" 192.168.1.15 ssh
+```
+* -L users.txt: Load a list of employees/users.
+
+* -p "Summer2024!": Try only this common password on everyone.
+
+Visualizing the Attack
+## Defense (How to stop this?)
+1. Strong Passwords: Use complex passwords not found in dictionaries (e.g., Tr0ub4dor&3).
+
+2. Rate Limiting (Fail2Ban): Automatically ban an IP address after 3-5 failed login attempts.
+
+3. MFA (Multi-Factor Authentication): Even if Hydra finds the password, it cannot bypass the OTP code.
