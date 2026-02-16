@@ -1,4 +1,4 @@
-# 🔐 Master Notes: Web Authentication & Security
+#  Master Notes: Web Authentication & Security
 
 A comprehensive deep dive into Authentication mechanisms, common vulnerabilities, and secure implementation patterns for modern web applications.
 
@@ -157,3 +157,50 @@ HMACSHA256(base64(Header) + "." + base64(Payload), SECRET)
 5.  **Token Rotation:**
     * Implement **Refresh Token Rotation**.
     * If a used refresh token is presented again, invalidate the entire token family to detect and stop token theft.
+
+# common questions and concepts
+
+## 8. Common Security Interview Questions
+
+### Q1: Why must a session ID be regenerated after login?
+**Answer:**
+To prevent **Session Fixation** attacks. If the ID is not regenerated, an attacker can trick a victim into authenticating with a known Session ID, allowing the attacker to hijack the session immediately.
+
+
+
+### Q2: What are the 3 mandatory properties of a secure password reset token?
+**Answer:**
+1.  **Cryptographically Random:** Unpredictable (CSPRNG).
+2.  **Short Expiry:** Valid for only 10-15 minutes.
+3.  **Single Use:** Invalidated immediately after use.
+
+### Q3: Why must 2FA validation be server-side?
+**Answer:**
+Because **Client-Side Validation** (JavaScript checks) can be easily bypassed by an attacker using tools like Burp Suite to modify the response or by directly forcing the browser to navigate to protected endpoints.
+
+
+
+### Q4: What is the purpose of JWT signature verification?
+**Answer:**
+To ensure the token was issued by the legitimate server and has **not been tampered with** by the client. Without signature verification, anyone can modify the payload (e.g., change `role: user` to `role: admin`).
+
+
+
+### Q5: Can a weak JWT secret lead to account takeover?
+**Answer:**
+**Yes.** If the HMAC secret (used in HS256) is weak (e.g., "secret123"), an attacker can brute-force it offline using tools like Hashcat. Once cracked, they can sign their own forged tokens with Admin privileges.
+
+### Q6: What is a Key Confusion Attack?
+**Answer:**
+An attack where the attacker changes the JWT header algorithm from **RS256** (Asymmetric) to **HS256** (Symmetric) and signs the token using the server's **Public Key** as the HMAC secret. The server, confused by the header, verifies the signature using its own public key and accepts the forged token.
+
+### Q7: If the server re-checks the user role from the database, does a forged JWT role work?
+**Answer:**
+**No.** This is the best defense. Even if the JWT says `role: admin`, the server-side database check (`SELECT role FROM users WHERE id = ?`) is the source of truth and will override the forged claim.
+
+### Q8: What is the most dangerous authentication vulnerability?
+**Answer:**
+**Authentication Bypass via Improper Signature Verification** (e.g., `alg: none` or missing verification). This is critical because it allows full **Privilege Escalation** (Account Takeover) without needing any credentials.
+
+
+## Documented by: *Mohammad Riyaz*
