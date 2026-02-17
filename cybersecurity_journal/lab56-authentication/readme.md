@@ -35,3 +35,42 @@ Authentication flows often have multiple steps: `Login -> 2FA -> Dashboard`.
 ##  Remediation
 * **Session Management:** Do not fully establish a privileged session until **all** authentication steps (including 2FA) are successfully completed.
 * **Middleware Checks:** Implement a check on every protected route to ensure the user has the `2fa_completed` flag set to true.
+
+# 2nd lab
+
+#  Lab: 2FA Broken Logic (PortSwigger)
+**Goal:** Bypass 2FA to access Carlos's account.
+**Vulnerability:** Business Logic Flaw + No Rate Limiting.
+
+##  Methodology
+
+### Step 1: Analyze the Flow
+1. Log in with valid credentials (`wiener:peter`).
+2. Observe the 2FA page. The server sets a cookie: `verify=wiener`.
+
+### Step 2: Trigger Code Generation for Victim (CRITICAL STEP)
+1. Capture the `GET /login2` request (the page load request).
+2. Send it to **Repeater**.
+3. Change the cookie to `verify=carlos`.
+4. Send request.
+   * *Logic:* This forces the server to generate a 4-digit code for Carlos internally.
+
+### Step 3: Brute Force the Code
+1. Attempt a login with a random code (e.g., `1234`).
+2. Capture the `POST /login2` request.
+3. Send to **Turbo Intruder** (or Intruder).
+4. **Modifications:**
+   * Change Cookie: `verify=carlos` (to match the victim).
+   * Set Payload: `mfa-code=%s` (for injection).
+5. **Payload Script:**
+   * Range: `0000` to `9999`.
+   * Format: `%04d` (to ensure 4 digits).
+
+### Step 4: The Exploit
+1. Run the attack.
+2. Look for **Status 302** (Found/Redirect).
+3. Right-click the request -> **Show response in browser**.
+4. Access the URL to log in as Carlos.
+
+---
+**Key Takeaway:** Always ensure the server has generated a session/code for the victim before starting a brute-force attack.
