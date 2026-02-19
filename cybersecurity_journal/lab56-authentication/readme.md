@@ -159,3 +159,45 @@ The server dynamically generates password reset links based on the `Host` or `X-
 
 ---
 **Key Takeaway / Mitigation:** Never trust the `Host` or `X-Forwarded-Host` headers to generate sensitive URLs (like password reset links). Always use a securely configured, hardcoded base URL on the server-side.
+
+# lab 5th
+
+#  Lab: Password Brute-force via Password Change (PortSwigger)
+**Goal:** Brute-force Carlos's password and log into his account.
+**Vulnerability:** Flawed Logic / Incomplete Rate Limiting on the Password Change Endpoint.
+
+##  The Concept
+The application destroys the user's session if they submit the wrong `current-password` during a password change attempt, intending to prevent brute-forcing. 
+However, if the user submits **mismatching** `new-password` values, the application evaluates the `current-password` first. If it's correct, it throws a "New passwords do not match" error. This specific code path bypasses the session-destruction mechanism, allowing unlimited brute-force attempts to guess the current password.
+
+##  Methodology & Steps
+
+### Step 1: Capture the Request
+1. Log in with your valid credentials (`wiener:peter`).
+2. Go to "My account" -> "Change Password".
+3. Enter fake details and intercept the `POST /my-account/change-password` request in Burp Suite.
+4. Send to **Intruder**.
+
+### Step 2: Configure Intruder (The Mismatch Trick)
+1. In the **Positions** tab, clear all default payload markers (`Clear §`).
+2. Change the `username` parameter from your user to the victim: `username=carlos`.
+3. Set the payload marker on the `current-password` parameter: `current-password=§peter§`.
+4. **CRITICAL:** Set the new passwords to mismatch intentionally to bypass session destruction.
+   Example: `new-password-1=123&new-password-2=abc`.
+   
+   *Final Payload String:*
+   `username=carlos&current-password=§peter§&new-password-1=123&new-password-2=abc`
+
+### Step 3: Brute-Force & Extract
+1. In the **Payloads** tab, paste the list of candidate passwords.
+2. In the **Settings (or Options)** tab under "Grep - Match", add the string: `New passwords do not match`.
+3. Start the attack.
+4. Look for the single request in the results table where the "New passwords do not match" column is ticked (✅). 
+5. The payload used for that request is Carlos's actual password.
+
+### Step 4: Exploit
+1. Log out of your account.
+2. Log in using `carlos` and the password you just discovered to solve the lab.
+
+---
+**Key Takeaway / Mitigation:** Rate limiting and brute-force protections must be applied consistently across all authentication-related endpoints, regardless of the input validation state (like mismatching passwords).
