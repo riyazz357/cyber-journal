@@ -164,10 +164,11 @@ Server checks `Origin` or `Referer` HTTP headers. Best used as Defense-in-Depth,
 *Answer:* Yes, if the JWT is stored in an `HttpOnly` Cookie. If it is stored in `localStorage` and attached via JavaScript to the `Authorization` header, traditional CSRF is impossible.
 
 **Q4: Is CSRF possible if an application uses JWTs?** 
-Answer: It depends entirely on where the JWT is stored. If the JWT is stored in an HttpOnly Cookie, the browser will auto-attach it, making CSRF possible. If it is stored in localStorage and attached via JavaScript to the Authorization header, traditional CSRF is impossible.
+*Answer*: It depends entirely on where the JWT is stored. If the JWT is stored in an HttpOnly Cookie, the browser will auto-attach it, making CSRF possible. If it is stored in localStorage and attached via JavaScript to the Authorization header, traditional CSRF is impossible.
 
 **Q5: How does the Double Submit Cookie pattern work, and what is its main weakness?**
-Answer: It relies on sending a random value in both a cookie and a request parameter. The server verifies they match. Its main weakness is that if an attacker compromises a subdomain (Subdomain Takeover), they can set cookies for the parent domain, thereby supplying their own matching cookie and parameter to bypass the check.
+*Answer*: It relies on sending a random value in both a cookie and a request parameter. The server verifies they match. Its main weakness is that if an attacker compromises a subdomain (Subdomain Takeover), they can set cookies for the parent domain, thereby supplying their own matching cookie and parameter to bypass the check.
+
 ---
 
 ## Documented by:*mohammad riyaz*

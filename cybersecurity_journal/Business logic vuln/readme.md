@@ -65,3 +65,36 @@ The application fails to validate whether the `quantity` parameter sent by the u
 
 ---
 **Key Takeaway / Mitigation:** Always validate user inputs strictly. For quantities, backend systems must enforce a rule that `quantity > 0` and ensure that integer manipulation (like integer overflows/underflows) cannot cause arithmetic logical bypasses during checkout.
+
+
+
+# 3rd LAB
+
+#  Lab: Inconsistent security controls (PortSwigger)
+**Goal:** Access the admin panel and delete the user `carlos`.
+**Vulnerability:** Business Logic Flaw (Inconsistent Security Validation / Privilege Escalation).
+
+## The Concept
+The application enforces strict security controls (email verification) during the initial user registration process. However, it fails to apply the same level of security to the "Update Email" functionality. Additionally, the system grants administrative privileges automatically to any user with an `@dontwannacry.com` email address. By changing an already verified email to the privileged domain, an attacker can escalate their privileges without needing to verify the new email address.
+
+##  Methodology & Steps
+
+### Step 1: Account Creation & Verification
+1. Access the provided "Email client" and copy your temporary `@exploit-server.net` email address.
+2. Go to the Lab's Registration page and sign up for a new account using the temporary email.
+3. Check the "Email client" inbox, open the registration email, and click the confirmation link to verify the account.
+
+### Step 2: Privilege Escalation (Inconsistent Control)
+1. Log in to your newly verified account.
+2. Navigate to the "My account" section where the "Update email" form is located.
+3. Change your email address to: `anything@dontwannacry.com`
+4. Submit the form. Notice that the application updates the email without sending a verification link to the new address.
+
+### Step 3: Exploit
+1. Because your account email now matches the internal corporate domain (`@dontwannacry.com`), the system automatically grants you administrative privileges.
+2. Click on the newly visible **"Admin panel"** link in the top navigation bar.
+3. Find the user `carlos` and click **"Delete"**.
+4. The lab is successfully solved.
+
+---
+**Key Takeaway / Mitigation:** Security controls must be applied consistently across all related features. If verifying an email address is required during signup, re-verification MUST be required when a user attempts to change their email address, especially if user roles/privileges are tied to the email domain.
