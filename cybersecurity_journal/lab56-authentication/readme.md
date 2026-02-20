@@ -201,3 +201,47 @@ However, if the user submits **mismatching** `new-password` values, the applicat
 
 ---
 **Key Takeaway / Mitigation:** Rate limiting and brute-force protections must be applied consistently across all authentication-related endpoints, regardless of the input validation state (like mismatching passwords).
+
+
+# LAB 6TH
+
+#  Lab: Brute-forcing a stay-logged-in cookie (PortSwigger)
+**Goal:** Reverse-engineer the cookie format and use Burp Intruder's Payload Processing to brute-force Carlos's session.
+**Vulnerability:** Predictable/Insecure Session Token Generation (MD5 Hashing).
+
+##  The Concept
+The `stay-logged-in` cookie is generated using the following flawed format:
+`Base64( username : MD5(password) )`
+By using Burp Intruder's Payload Processing rules, we can automatically transform a plain text password list into correctly formatted, Base64-encoded cookies on the fly to brute-force a valid session.
+
+##  Methodology & Steps
+
+### Step 1: Request Interception
+1. Attempt to access the `/my-account` endpoint while unauthenticated.
+2. Send the resulting `GET /my-account` request to **Intruder**.
+
+### Step 2: Set the Injection Point
+1. In the **Positions** tab, clear all default markers.
+2. Add a `stay-logged-in` cookie parameter and place the payload marker there:
+   `Cookie: stay-logged-in=§§`
+
+### Step 3: Payload Processing (The Core Exploit)
+1. Go to the **Payloads** tab.
+2. Paste your list of candidate passwords into the Simple List.
+3. Under **Payload Processing**, add the following rules in this EXACT sequence:
+   * **Rule 1:** `Hash` -> `MD5` (Hashes the plaintext password).
+   * **Rule 2:** `Add prefix` -> `carlos:` (Prepends the victim's username).
+   * **Rule 3:** `Encode` -> `Base64-encode` (Encodes the entire string to match the cookie format).
+4. **Important:** Uncheck the "URL-encode these characters" box at the bottom of the tab so the Base64 padding (`=`) is not altered.
+
+### Step 4: Execute and Analyze
+1. Start the attack.
+2. Monitor the HTTP Status Codes in the results table.
+3. Invalid cookies will result in a `302 Found` (redirect to the login page).
+4. The single request that returns a `200 OK` is the correct cookie. The plaintext payload listed for that request is the victim's password.
+
+### Step 5: Takedown
+1. Use the recovered plaintext password to log in as `carlos` and solve the lab.
+
+---
+**Key Takeaway / Mitigation:** Never use predictable components (like MD5 hashes of passwords) to generate session tokens. Always use strong, cryptographically secure random number generators (CSPRNG) to create opaque, unpredictable session IDs.
