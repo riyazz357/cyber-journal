@@ -197,3 +197,41 @@ By crafting an email address where the 255th character perfectly ends with a pri
 
 ---
 **Key Takeaway / Mitigation:** Input validation and length enforcement must be strictly and consistently applied across ALL layers of the application (Frontend, Backend Logic, and Database). The application backend should actively reject inputs that exceed the maximum allowed length rather than relying on the database to silently truncate them.
+
+
+
+# 7th lab
+
+
+
+#  Lab: Weak isolation on dual-use endpoint (PortSwigger)
+**Goal:** Access the `administrator` account by modifying their password, then delete `carlos`.
+**Vulnerability:** Business Logic Flaw (Weak Isolation on Dual-Use Endpoint / Parameter Stripping).
+
+##  The Concept
+A dual-use endpoint serves multiple roles (e.g., normal users changing their own passwords AND administrators resetting other users' passwords). The application uses the presence or absence of certain parameters (like `current-password`) to determine which logic path to follow. By intercepting a normal password change request and completely removing the `current-password` parameter, a regular user can trick the backend into executing the administrator-only code path, thereby resetting any user's password without knowing their current one.
+
+##  Methodology & Steps
+
+### Step 1: Intercept Password Change
+1. Log in with the provided credentials (`wiener:peter`).
+2. Navigate to the password change functionality.
+3. Fill out the form: Current password (`peter`), and a new password (`hacker123`).
+4. Turn on Intercept in Burp Suite and submit the form.
+
+### Step 2: Parameter Stripping & Target Modification
+1. In the intercepted `POST` request, locate the request body containing the parameters.
+   *Original:* `username=wiener&current-password=peter&new-password=hacker123&new-password-confirmation=hacker123`
+2. Change the `username` parameter to your target: `username=administrator`.
+3. **Delete** the entire `current-password` parameter and its value from the request.
+   *Modified:* `username=administrator&new-password=hacker123&new-password-confirmation=hacker123`
+4. Forward the request and turn off Intercept.
+
+### Step 3: Privilege Escalation & Exploit
+1. Log out of your current session.
+2. Log in using the hijacked credentials: `administrator` / `hacker123`.
+3. Access the newly available **Admin panel**.
+4. Delete the user `carlos` to solve the lab.
+
+---
+**Key Takeaway / Mitigation:** Never use the exact same endpoint for normal user actions and administrative actions without strictly validating the session's privilege level. The backend MUST explicitly check the user's role (e.g., `if user.role != ADMIN`) before allowing them to bypass validations like providing a current password.
