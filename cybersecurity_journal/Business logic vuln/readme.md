@@ -98,3 +98,35 @@ The application enforces strict security controls (email verification) during th
 
 ---
 **Key Takeaway / Mitigation:** Security controls must be applied consistently across all related features. If verifying an email address is required during signup, re-verification MUST be required when a user attempts to change their email address, especially if user roles/privileges are tied to the email domain.
+
+
+# 4th lab
+
+# Lab: Flawed enforcement of business rules (PortSwigger)
+**Goal:** Buy the "Lightweight l33t leather jacket" using coupon stacking to reduce the price to $0.
+**Vulnerability:** Business Logic Flaw (Flawed Enforcement of Business Rules / Coupon Stacking).
+
+##  The Concept
+The application has a business rule that aims to prevent users from applying the same coupon code multiple times. However, the enforcement logic is flawed: it only checks if the *currently* submitted coupon is the exact same as the *previously* submitted coupon. It fails to check the entire history of applied coupons for the session. By alternating between two different valid coupon codes, an attacker can bypass the check and stack discounts infinitely until the cart value drops to zero.
+
+##  Methodology & Steps
+
+### Step 1: Setup
+1. Log in to the application with the provided credentials (`wiener:peter`).
+2. Add the target item ("Lightweight l33t leather jacket", $1337.00) to your shopping cart.
+3. Navigate to the Cart page.
+
+### Step 2: The Alternate Stacking Exploit
+1. In the "Coupon code" input field, enter the first coupon: `NEWCUST5` and apply it.
+2. The price will decrease.
+3. In the same input field, enter the second coupon: `SIGNUP30` and apply it.
+4. The price will decrease further.
+5. Re-enter the first coupon: `NEWCUST5` and apply it again. It will be accepted because the *last* applied coupon was `SIGNUP30`.
+
+### Step 3: Takedown
+1. Continue alternating between `NEWCUST5` and `SIGNUP30` (or use Burp Repeater to send the `POST /cart/coupon` requests alternately to speed up the process).
+2. Keep stacking the discounts until the Total price reaches **$0.00**.
+3. Click the **"Place order"** button to check out successfully and solve the lab.
+
+---
+**Key Takeaway / Mitigation:** Business rules must be enforced comprehensively. To prevent coupon stacking, the backend should maintain a list (array/set) of all coupons applied to the current cart/session. The logic should evaluate: `If (New_Coupon IN Applied_Coupons_List) -> Reject`.
