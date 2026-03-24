@@ -235,3 +235,66 @@ A dual-use endpoint serves multiple roles (e.g., normal users changing their own
 
 ---
 **Key Takeaway / Mitigation:** Never use the exact same endpoint for normal user actions and administrative actions without strictly validating the session's privilege level. The backend MUST explicitly check the user's role (e.g., `if user.role != ADMIN`) before allowing them to bypass validations like providing a current password.
+
+# 8th lab
+
+#  Lab: Insufficient workflow validation (PortSwigger)
+**Goal:** Purchase the "Lightweight l33t leather jacket" without sufficient store credit.
+**Vulnerability:** Business Logic Flaw (Insufficient Workflow Validation / State Machine Bypass).
+
+##  The Concept
+The application's checkout process relies on a multi-step workflow (e.g., Cart -> Payment -> Order Confirmation). The developer assumed that users will only reach the "Order Confirmation" endpoint if they have successfully passed the "Payment" endpoint. Because the application fails to validate the workflow state at the final step, an attacker can simply add an expensive item to their cart and forcefully navigate to the confirmation URL, completely bypassing the payment and balance check mechanism.
+
+##  Methodology & Steps
+
+### Step 1: Reconnaissance (Identify the target endpoint)
+1. Log in with the provided credentials (`wiener:peter`).
+2. Add a cheap item (e.g., Diet Coke) to your cart.
+3. Complete the checkout process normally by clicking "Place order".
+4. Observe the URL of the final order confirmation page:
+   `GET /cart/order-confirmation?order-confirmed=true`
+5. Copy this URL path.
+
+### Step 2: Setup the Target
+1. Go back to the home page and add the "Lightweight l33t leather jacket" ($1337) to your cart.
+2. Navigate to your Cart. Do NOT click "Place order", as the server will check your balance and reject the request.
+
+### Step 3: Workflow Bypass (The Exploit)
+1. While on the cart page, manually edit the URL in your browser's address bar.
+2. Append the confirmation path to the lab's base URL:
+   `https://<YOUR-LAB-ID>.web-security-academy.net/cart/order-confirmation?order-confirmed=true`
+3. Hit Enter.
+4. The server blindly processes the confirmation endpoint, assumes payment was completed, and places the order for the jacket, solving the lab.
+
+---
+**Key Takeaway / Mitigation:** Never assume a user has completed previous steps in a workflow just because they request a subsequent endpoint. The backend must enforce a strict "State Machine". When the order confirmation endpoint is hit, the server must verify a session-linked token or database flag that explicitly proves `payment_status == SUCCESS` for the current cart.
+
+
+# 9th lab
+
+#  Lab: Authentication bypass via flawed state machine (PortSwigger)
+**Goal:** Bypass the role selection process to gain administrative privileges and delete the user `carlos`.
+**Vulnerability:** Business Logic Flaw (Flawed State Machine / Insecure Default State).
+
+##  The Concept
+The application's login process involves a multi-stage state machine: Authentication (`POST /login`) followed by Role Selection (`GET /role-selector`). However, the developer made a flawed assumption: if a user bypasses the role selection phase, their session defaults to an `Administrator` role instead of a lower-privileged state (Failing Open). By intercepting and dropping the role-selection request, an attacker can inherit these default high privileges.
+
+##  Methodology & Steps
+
+### Step 1: Intercept the Login Process
+1. Turn on Intercept in Burp Suite.
+2. Submit the login credentials (`wiener:peter`).
+
+### Step 2: Drop the Role Selector Request
+1. In Burp Suite, observe the first request (`POST /login`) and click **Forward**.
+2. The server responds with a redirect, and the browser immediately sends the next request: `GET /role-selector`.
+3. Instead of forwarding this request, click the **Drop** button to destroy the request completely.
+4. Turn off Intercept.
+
+### Step 3: Exploit the Default State
+1. In your browser, manually navigate to the homepage or the `/admin` path.
+2. Observe that you now have administrative privileges because the state machine failed open.
+3. Access the Admin panel and click **Delete** next to the user `carlos` to solve the lab.
+
+---
+**Key Takeaway / Mitigation:** State machines must always fail securely ("Fail Closed"). If a user does not explicitly complete the required steps to establish their role, their session should be granted zero privileges or the lowest possible privileges by default. Never assign administrative roles as a fallback default.
