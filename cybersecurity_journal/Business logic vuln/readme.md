@@ -130,3 +130,35 @@ The application has a business rule that aims to prevent users from applying the
 
 ---
 **Key Takeaway / Mitigation:** Business rules must be enforced comprehensively. To prevent coupon stacking, the backend should maintain a list (array/set) of all coupons applied to the current cart/session. The logic should evaluate: `If (New_Coupon IN Applied_Coupons_List) -> Reject`.
+
+
+# 5th lab
+
+# Lab: Low-level logic flaw (PortSwigger)
+**Goal:** Purchase the "Lightweight l33t leather jacket" with limited funds ($100).
+**Vulnerability:** Low-level Logic Flaw (Integer Overflow).
+
+##  The Concept
+The application calculates the total cart value by multiplying the item price (in cents) by the quantity. However, it stores this total in a standard 32-bit signed integer format. The maximum value this data type can hold is `2,147,483,647`. If the total cart value exceeds this number, an **Integer Overflow** occurs, and the value wraps around to a massive negative number (`-2,147,483,648`). By exploiting this, an attacker can manipulate the cart total into a negative value and then balance it back to a small positive amount (under their account balance) to purchase expensive items.
+
+##  Methodology & Steps
+
+### Step 1: Intercept the Cart Request
+1. Log in with `wiener:peter`.
+2. Add the target item ("Lightweight l33t leather jacket") to the cart.
+3. Locate the `POST /cart` request in Burp Suite and send it to **Intruder**.
+
+### Step 2: Trigger the Integer Overflow
+1. In Intruder (Positions tab), change the `quantity` parameter in the request body to `99` (the max allowed per UI request) and clear all payload markers.
+2. Go to the Payloads tab. Set the Payload type to **Null payloads**.
+3. Under Payload Options, set "Generate" to **323** payloads.
+4. Start the attack to send 323 consecutive requests, adding 31,977 jackets to the cart.
+5. Check the cart in your browser. The total value should now be a large negative number.
+
+### Step 3: Balance the Cart and Exploit
+1. Manually add more jackets or other items to the cart to bring the negative total closer to zero.
+2. Once the negative amount is small enough, add cheaper items (or specific quantities using Burp Repeater) until the final Cart Total is **greater than $0.00 and less than $100.00**.
+3. Click **"Place order"** to complete the purchase and solve the lab.
+
+---
+**Key Takeaway / Mitigation:** When dealing with financial calculations, backend systems should use data types that can handle extremely large numbers (like 64-bit integers or BigInt). Additionally, the application must perform explicit boundary checking to prevent the cart total from exceeding logical limits or dropping below zero.
