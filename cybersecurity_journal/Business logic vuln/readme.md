@@ -162,3 +162,38 @@ The application calculates the total cart value by multiplying the item price (i
 
 ---
 **Key Takeaway / Mitigation:** When dealing with financial calculations, backend systems should use data types that can handle extremely large numbers (like 64-bit integers or BigInt). Additionally, the application must perform explicit boundary checking to prevent the cart total from exceeding logical limits or dropping below zero.
+
+
+# 6th lab
+
+#  Lab: Inconsistent handling of exceptional input (PortSwigger)
+**Goal:** Access the admin panel and delete Carlos by exploiting an email string truncation vulnerability.
+**Vulnerability:** Business Logic Flaw (Inconsistent Input Handling / Database Truncation).
+
+##  The Concept
+Different components of an application (e.g., the registration handler vs. the database) may process exceptionally long inputs differently. In this lab, the database truncates the `email` field to exactly 255 characters. However, the email-sending mechanism processes the entire input. 
+By crafting an email address where the 255th character perfectly ends with a privileged domain (`@dontwannacry.com`), followed by an attacker-controlled domain (`.exploit-server.net`), the attacker receives the verification email. Once verified, the database only stores the truncated, privileged domain, granting the attacker Admin rights.
+
+##  Methodology & Steps
+
+### Step 1: Payload Generation
+1. Identify the target privileged domain: `@dontwannacry.com` (17 chars).
+2. Calculate the padding needed to reach the 255-character database limit: `255 - 17 = 238 chars`.
+3. Create a 238-character string (e.g., 238 'A's).
+4. Construct the malicious email payload: 
+   `[238 'A's]@dontwannacry.com.[YOUR_EXPLOIT_SERVER_DOMAIN]`
+
+### Step 2: Registration and Verification
+1. Go to the Lab's registration page.
+2. Register a new user using the constructed malicious payload as the email.
+3. Navigate to the exploit server's Email Client. Because the email dispatcher processes the full string, the verification email is delivered to your exploit server.
+4. Click the verification link to activate the account.
+
+### Step 3: Privilege Escalation & Exploit
+1. Log in to the application with the newly registered credentials.
+2. During login, the application reads the email from the database, which was truncated at 255 characters, leaving only: `[238 'A's]@dontwannacry.com`.
+3. The system recognizes the privileged domain and grants Admin access.
+4. Access the **Admin panel** and delete the user `carlos` to solve the lab.
+
+---
+**Key Takeaway / Mitigation:** Input validation and length enforcement must be strictly and consistently applied across ALL layers of the application (Frontend, Backend Logic, and Database). The application backend should actively reject inputs that exceed the maximum allowed length rather than relying on the database to silently truncate them.
