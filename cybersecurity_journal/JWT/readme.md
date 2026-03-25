@@ -30,7 +30,7 @@ To avoid manual Base64URL encoding errors (like padding `=` or accidental spaces
 1. In the same Repeater request, change the top request line from `GET /my-account HTTP/2` to **`GET /admin HTTP/2`**.
 2. Click **Send**. You should get a `200 OK` response, confirming you are now an Admin.
 3. To finish the lab, change the request line again to **`GET /admin/delete?username=carlos HTTP/2`**.
-4. Click **Send**. The lab will be marked as solved! 🎉
+4. Click **Send**. The lab will be marked as solved! 
 
 ---
 **Key Takeaway:** Never trust client-provided data. Even if a JWT looks valid, the backend MUST verify the signature using the server's secret key before trusting the claims inside the payload.
@@ -38,19 +38,19 @@ To avoid manual Base64URL encoding errors (like padding `=` or accidental spaces
 
 # 2nd lab
 
-# 🛡️ Lab: JWT authentication bypass via flawed signature verification
+#  Lab: JWT authentication bypass via flawed signature verification
 **Platform:** PortSwigger Web Security Academy
 **Goal:** Modify the JWT session cookie to access the admin panel and delete user `carlos`.
 **Vulnerability:** Insecure JWT Implementation (The server blindly trusts the `alg` header provided by the client, allowing the `none` algorithm to bypass signature verification).
 
-## 🧠 The Concept (The `alg: none` Attack)
+##  The Concept (The `alg: none` Attack)
 The JWT specification originally included a `none` algorithm intended for debugging purposes, meaning the token has no signature. A critical vulnerability occurs if a backend server dynamically selects its signature verification algorithm based purely on the `alg` parameter present in the JWT Header. 
 An attacker can manipulate the Header to `"alg": "none"`, elevate privileges in the Payload (e.g., `"sub": "administrator"`), and completely remove the Signature (leaving only the trailing dot `.`). The server reads `alg: none`, skips signature verification, and accepts the forged token.
 
-## 🧰 Prerequisites
+##  Prerequisites
 * Burp Suite with the **JWT Editor** extension installed (via BApp Store).
 
-## 🛠️ Step-by-Step Exploitation
+##  Step-by-Step Exploitation
 
 ### Step 1: Capture the Target Token
 1. Log in to the application using standard credentials (`wiener:peter`).
@@ -70,7 +70,11 @@ An attacker can manipulate the Header to `"alg": "none"`, elevate privileges in 
 2. Modify the first line of the HTTP request from `GET /my-account HTTP/2` to **`GET /admin HTTP/2`**.
 3. Click **Send**. You should receive a `200 OK` response.
 4. Modify the request line again to **`GET /admin/delete?username=carlos HTTP/2`** and click **Send**.
-5. The lab is successfully solved! 🎉
+5. The lab is successfully solved! 
 
 ---
 **Key Takeaway / Mitigation:** Never trust the client-supplied `alg` header. The server must enforce a strict, hardcoded whitelist of allowed algorithms (e.g., only `HS256` or `RS256`) and explicitly reject any tokens specifying `none` in a production environment.
+
+
+# 3rd LAB
+
