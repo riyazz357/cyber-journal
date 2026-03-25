@@ -298,3 +298,42 @@ The application's login process involves a multi-stage state machine: Authentica
 
 ---
 **Key Takeaway / Mitigation:** State machines must always fail securely ("Fail Closed"). If a user does not explicitly complete the required steps to establish their role, their session should be granted zero privileges or the lowest possible privileges by default. Never assign administrative roles as a fallback default.
+
+# 10th lab
+
+#  Lab: Infinite money logic flaw (PortSwigger)
+**Goal:** Exploit a logic flaw to generate enough store credit to buy the "Lightweight l33t leather jacket".
+**Vulnerability:** Business Logic Flaw (Arbitrage / Flawed Discount Implementation).
+
+##  The Concept
+The application allows users to apply a 30% discount coupon (`SIGNUP30`) to all items in the store, **including gift cards**. Since a gift card represents a fixed monetary value ($10) but can be purchased for less ($7), an attacker can create an infinite money loop. By repeatedly buying discounted gift cards and redeeming them back into their own account, the attacker nets a $3 profit per transaction, eventually generating infinite store credit.
+
+##  Methodology & Steps
+
+### Step 1: The Manual Exploit Loop
+1. Log in using `wiener:peter`.
+2. Add a $10 Gift Card to your cart.
+3. Navigate to the cart and apply the coupon code `SIGNUP30`. The price drops to $7.
+4. Click "Place order".
+5. On the order confirmation page, copy the generated Gift Card code.
+6. Navigate to "My account", paste the code into the Gift Card redemption box, and click "Redeem".
+7. Observe that your balance has increased by a net of $3.
+
+### Step 2: Automation via Burp Suite Macros
+*(Note: Doing this manually ~400 times is impractical).*
+1. Go to **Project Options -> Sessions** in Burp Suite.
+2. Create a new **Macro** that records the exact sequence of actions:
+   - `POST /cart` (Add to cart)
+   - `POST /cart/coupon` (Apply SIGNUP30)
+   - `POST /cart/checkout` (Place order)
+   - `GET /cart/order-confirmation` (Get the code)
+   - `POST /gift-card` (Redeem the code)
+3. Set a custom parameter rule to extract the gift card code from the response of the `GET /cart/order-confirmation` request and pass it to the `POST /gift-card` request.
+4. Send the final request to Burp Intruder, set null payloads to run 400+ times, and execute the attack.
+
+### Step 3: Purchase the Target Item
+1. Once your store credit exceeds $1337, navigate to the target item.
+2. Add the "Lightweight l33t leather jacket" to your cart and place the order.
+
+---
+**Key Takeaway / Mitigation:** Never treat cash equivalents (like gift cards, wallet top-ups, or digital currency) as regular retail products. Discount codes, promotional offers, and coupons must have strict exclusion rules explicitly preventing them from being applied to monetary or cash-equivalent items.
