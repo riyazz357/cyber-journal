@@ -165,3 +165,75 @@ If the backend server is misconfigured to trust this dynamically provided key in
 
 ---
 **Key Takeaway / Mitigation:** Never trust cryptographic keys provided by the client in the JWT header (`jwk`, `jku`, `x5c`, etc.). Servers must explicitly enforce signature verification using a pre-configured, trusted public key stored securely on the backend.
+
+
+# 5TH LAB
+
+#  Lab: JWT authentication bypass via jku header injection
+**Platform:** PortSwigger Web Security Academy
+**Goal:** Host a malicious JWK on the exploit server, inject the `jku` header to point to it, bypass authentication, and delete user `carlos`.
+**Vulnerability:** Insecure JWT Implementation (The server supports the `jku` header and fails to validate whether the provided URL belongs to a trusted domain, allowing SSRF-like behavior to fetch attacker-controlled public keys).
+
+##  The Concept (The "Fake Map" Attack)
+The `jku` (JWK Set URL) header specifies a URI where the server can fetch the JSON Web Key (JWK) Set containing the public key needed to verify the token's signature. 
+If a server dynamically fetches the public key from the URL provided in the `jku` header without checking if the URL is whitelisted, an attacker can exploit this. The attacker generates an RSA key pair, hosts the Public Key on their own server, modifies the JWT payload (`"sub": "administrator"`), and injects their server's URL into the `jku` header. The target server fetches the attacker's public key, uses it to verify the attacker's forged signature, and grants unauthorized access.
+
+##  Prerequisites
+* Burp Suite with the **JWT Editor** extension installed.
+* An attacker-controlled server (Exploit Server provided by the lab).
+
+##  Step-by-Step Exploitation
+
+### Step 1: Generate & Copy the Public Key
+1. In Burp Suite, go to the **JWT Editor Keys** tab.
+2. Click **New RSA Key** -> **Generate** -> **OK**.
+3. Right-click the newly created key and select **Copy Public Key as JWK**.
+
+### Step 2: Host the Malicious Key Set
+1. Go to the lab's **Exploit Server**.
+2. In the **Body** section, create a JSON object with a `keys` array and paste your JWK inside:
+   ```json
+   {
+       "keys": [
+           {
+               "kty": "RSA",
+               "e": "AQAB",
+               "kid": "893d8f...", 
+               "n": "..."
+           }
+       ]
+   }
+   ```
+3. Click Store to host this file. Copy the Exploit Server's URL.
+
+### Step 3: Forge the Token & Inject jku
+1. Intercept or find the GET /my-account request in Burp and send it to Repeater.
+
+2. Go to the JSON Web Tokens tab.
+
+3. In the Header, update the "kid" to match the ID from your hosted JWK. Add the "jku" parameter pointing to your exploit server:
+```
+JSON
+{
+    "kid": "893d8f...",
+    "jku": "[https://YOUR-EXPLOIT-SERVER-ID.exploit-server.net/exploit](https://YOUR-EXPLOIT-SERVER-ID.exploit-server.net/exploit)",
+    "alg": "RS256"
+}
+```
+4. In the Payload, change "sub": "wiener" to "sub": "administrator".
+
+5. Click the Sign button at the bottom.
+
+6. Select your RSA key, check the box for "Don't modify header" (Crucial!), and click OK.
+
+### Step 4: Privilege Escalation & Takedown
+1. Switch to the raw Request tab in Repeater.
+
+2. Change the request path to GET /admin HTTP/2 and click Send. Verify you get a 200 OK.
+
+3. Change the path to GET /admin/delete?username=carlos HTTP/2 and click Send.
+
+4. The lab is successfully solved! 
+
+
+**Key Takeaway / Mitigation:** If a server must use the jku header, it must strictly validate the URL against a hardcoded whitelist of trusted domains before fetching the key. Otherwise, ignore the jku header entirely and rely on a locally configured, trusted public key.
