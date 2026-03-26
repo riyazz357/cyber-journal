@@ -76,5 +76,92 @@ An attacker can manipulate the Header to `"alg": "none"`, elevate privileges in 
 **Key Takeaway / Mitigation:** Never trust the client-supplied `alg` header. The server must enforce a strict, hardcoded whitelist of allowed algorithms (e.g., only `HS256` or `RS256`) and explicitly reject any tokens specifying `none` in a production environment.
 
 
+
 # 3rd LAB
 
+#  Lab: JWT authentication bypass via weak signing key
+**Platform:** PortSwigger Web Security Academy
+**Goal:** Crack the JWT secret key, forge a valid admin token, and delete user `carlos`.
+**Vulnerability:** Insecure JWT Implementation (The server uses a weak, easily guessable secret key to sign the JWTs using the HS256 symmetric algorithm).
+
+##  The Concept (Offline Dictionary Attack)
+When a JWT uses a symmetric algorithm like HS256, the exact same secret key is used to both create the signature and verify it. If a developer uses a weak password as the secret key (like `secret1`, `password`, etc.), an attacker can capture a single valid JWT and run an offline dictionary attack against it. 
+
+The attacker's tool will try hashing the token's header and payload with every password in a wordlist until the resulting signature matches the signature on the captured token. Once the secret key is cracked, the attacker can create new tokens with elevated privileges (e.g., `"sub": "administrator"`) and sign them perfectly using the stolen key. The server will trust the forged token completely.
+
+##  Prerequisites
+* A captured JWT from the target application.
+* A wordlist of common passwords/secrets (provided in the lab description).
+* An offline cracking tool like **Hashcat** (or a custom Python script) OR the Burp Suite **JWT Editor** extension (if setting the key manually).
+
+##  Step-by-Step Exploitation
+
+### Step 1: Capture the Token & Wordlist
+1. Log in to the application using standard credentials (`wiener:peter`).
+2. Go to Burp Suite's HTTP History, find the `GET /my-account` request, and copy the JWT from the `session` cookie.
+3. Download the "wordlist of common secrets" provided on the lab's main page.
+
+### Step 2: Crack the Secret Key (Offline)
+*Using Hashcat (Linux/Windows):*
+Save the JWT to a file named `jwt.txt` and the wordlist to `wordlist.txt`. Run the following command in your terminal:
+`hashcat -a 0 -m 16500 jwt.txt wordlist.txt`
+*Result:* Hashcat will crack the token and reveal the weak secret key (usually `secret1`).
+
+### Step 3: Forge the Admin Token
+1. Go to [jwt.io](https://jwt.io/) in your browser.
+2. Paste your captured JWT into the "Encoded" panel on the left.
+3. In the "Decoded" panel on the right, modify the **Payload**: change `"sub": "wiener"` to `"sub": "administrator"`.
+4. Scroll down to the **Verify Signature** section. Replace the placeholder `your-256-bit-secret` with your cracked key (`secret1`).
+5. Copy the newly generated, properly signed JWT from the left panel.
+
+### Step 4: Privilege Escalation & Takedown
+1. Send the `GET /my-account` request to Burp Suite Repeater.
+2. Replace your old `session` cookie with the newly forged JWT.
+3. Change the request path to `GET /admin HTTP/2` and click **Send** to verify admin access (you should see a `200 OK`).
+4. Change the path to `GET /admin/delete?username=carlos HTTP/2` and click **Send**.
+5. The lab is successfully solved! 🎉
+
+---
+**Key Takeaway / Mitigation:** Always use strong, unpredictable, and cryptographically secure secrets for signing JWTs. A good secret for HS256 should be randomly generated and at least 256 bits (32 bytes) long to prevent offline brute-force attacks.
+
+
+# 4TH LAB
+
+# Lab: JWT authentication bypass via jwk header injection
+**Platform:** PortSwigger Web Security Academy
+**Goal:** Forge a JWT using your own RSA key pair, inject the public key via the `jwk` header, bypass authentication, and delete user `carlos`.
+**Vulnerability:** Insecure JWT Implementation (The server blindly trusts the `jwk` parameter in the JWT header, dynamically using the attacker's public key to verify the token's signature).
+
+## The Concept (The "Bring Your Own Lock" Attack)
+The JSON Web Signature (JWS) specification allows developers to embed their Public Key directly inside the token's header using the `jwk` (JSON Web Key) parameter. 
+If the backend server is misconfigured to trust this dynamically provided key instead of using its own statically configured trusted Public Key, an attacker can completely bypass the signature verification process. The attacker simply generates a new RSA key pair, alters the token's payload to elevate privileges (e.g., `"sub": "administrator"`), signs the token with their forged Private Key, and embeds the corresponding forged Public Key in the `jwk` header. The server verifies the token using the attacker's public key, resulting in a successful validation.
+
+##  Prerequisites
+* Burp Suite with the **JWT Editor** extension installed.
+
+##  Step-by-Step Exploitation
+
+### Step 1: Generate a Rogue RSA Key Pair
+1. In Burp Suite, navigate to the **JWT Editor Keys** tab.
+2. Click **New RSA Key**.
+3. In the dialog box, click **Generate** to create a new key pair, then click **OK** to save it.
+
+### Step 2: Capture the Target Token
+1. Log in to the application using standard credentials (`wiener:peter`).
+2. Go to Burp Suite's HTTP History, find the `GET /my-account` request, and send it to **Repeater (Ctrl+R)**.
+
+### Step 3: Forge the Token & Inject JWK
+1. In the Repeater tab, switch to the **JSON Web Tokens** extension tab.
+2. In the **Payload** section, change the user claim from `"sub": "wiener"` to `"sub": "administrator"`.
+3. At the bottom of the tab, click the **Attack** button and select **Embedded JWK**.
+4. A prompt will appear asking you to select a key. Choose the RSA key you generated in Step 1 and click **OK**.
+   *(Note: The JWT Editor will automatically update the payload, inject your public key into the `jwk` header, and sign the token with your private key).*
+
+### Step 4: Privilege Escalation & Takedown
+1. Switch back to the raw **Request** tab in Repeater.
+2. Modify the request line to `GET /admin HTTP/2` and click **Send**. You should receive a `200 OK` response, confirming admin access.
+3. Modify the request line to `GET /admin/delete?username=carlos HTTP/2` and click **Send**.
+4. The lab is successfully solved! 
+
+---
+**Key Takeaway / Mitigation:** Never trust cryptographic keys provided by the client in the JWT header (`jwk`, `jku`, `x5c`, etc.). Servers must explicitly enforce signature verification using a pre-configured, trusted public key stored securely on the backend.
