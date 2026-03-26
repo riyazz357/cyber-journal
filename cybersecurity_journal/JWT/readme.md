@@ -237,3 +237,53 @@ JSON
 
 
 **Key Takeaway / Mitigation:** If a server must use the jku header, it must strictly validate the URL against a hardcoded whitelist of trusted domains before fetching the key. Otherwise, ignore the jku header entirely and rely on a locally configured, trusted public key.
+
+
+
+
+# 6TH LAB
+
+
+# Lab: JWT authentication bypass via kid header path traversal
+**Platform:** PortSwigger Web Security Academy
+**Goal:** Use directory traversal in the `kid` header to force the server to use `/dev/null` as the verification key, sign a forged token with a null byte, and delete user `carlos`.
+**Vulnerability:** Directory Traversal in JWT Header + Insecure JWT Implementation (The server blindly uses the file path provided in the `kid` header to fetch the secret key without sanitizing the input).
+
+## The Concept (The "Black Hole" Attack)
+The `kid` (Key ID) header parameter is often used to retrieve the correct verification key from a local database or filesystem. If this parameter is vulnerable to Path Traversal, an attacker can manipulate it to point to a predictable file.
+By pointing the `kid` to `../../../../../../../dev/null` (a file on Linux systems that is always empty), the server reads an empty stream and effectively uses a Null Byte as the symmetric secret key. The attacker can then forge a token, sign it locally using a Base64 encoded Null Byte (`AA==`), and the server will successfully verify it.
+
+##  Prerequisites
+* Burp Suite with the **JWT Editor** extension installed.
+
+##  Step-by-Step Exploitation
+
+### Step 1: Create a Null Byte Symmetric Key
+1. Go to the **JWT Editor Keys** tab in Burp.
+2. Click **New Symmetric Key**.
+3. Click **Generate** to create a template.
+4. Replace the generated value of the `"k"` parameter with `"AA=="` (Base64 for a null byte).
+   `"k": "AA=="`
+5. Click **OK** to save the key.
+
+### Step 2: Forge the Token
+1. Intercept the `GET /my-account` request and send it to **Repeater**.
+2. Go to the **JSON Web Tokens** tab.
+3. In the **Header**, change the `"kid"` value to the path traversal payload:
+   `"kid": "../../../../../../../dev/null"`
+4. In the **Payload**, change `"sub": "wiener"` to `"sub": "administrator"`.
+
+### Step 3: Sign and Bypass
+1. Click the **Sign** button at the bottom of the JWT tab.
+2. Select your newly created Null Byte Symmetric Key.
+3. **CRITICAL:** Check the box that says **"Don't modify header"** (to prevent the extension from overwriting your directory traversal payload).
+4. Click **OK**.
+
+### Step 4: Privilege Escalation & Takedown
+1. Switch to the raw **Request** tab in Repeater.
+2. Change the request path to `GET /admin HTTP/2` and click **Send**. Verify you get a `200 OK`.
+3. Change the path to `GET /admin/delete?username=carlos HTTP/2` and click **Send**.
+4. The lab is successfully solved! 
+
+---
+**Key Takeaway / Mitigation:** Never pass user-controlled input directly to filesystem APIs. The `kid` parameter should strictly be treated as an opaque string identifier, not a file path. Validate it against a hardcoded list of allowed Key IDs.
