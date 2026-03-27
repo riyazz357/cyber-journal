@@ -261,6 +261,7 @@ architectural level:
     explicitly invokes the signature verification function before any payload decoding or
     business logic routing occurs. Code paths that allow parsing without prior validation
     must be eliminated.
-    DOCUMENTED BY: MOHAMMAD RIYAZ
+
+    ## DOCUMENTED BY: *MOHAMMAD RIYAZ*
 
 
