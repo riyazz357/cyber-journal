@@ -85,20 +85,20 @@ However, the application only checks if the value in the cookie matches the valu
 # 7th lab
 
 
-# 🛡️ Lab: SameSite Lax bypass via method override
+#  Lab: SameSite Lax bypass via method override
 **Platform:** PortSwigger Web Security Academy
 **Goal:** Bypass `SameSite=Lax` restrictions to change the victim's email address using an exploit server.
 **Vulnerability:** CSRF via HTTP Method Overriding bypassing SameSite=Lax cookie restrictions.
 
-## 🧠 The Concept
+##  The Concept
 Modern browsers enforce `SameSite=Lax` by default on cookies. This prevents cookies from being sent in cross-site `POST` requests, effectively mitigating standard CSRF attacks. However, `Lax` allows cookies to be sent during top-level navigations using safe HTTP methods like `GET`.
 Many web frameworks support **HTTP Method Overriding** (e.g., using a `_method` parameter) to simulate unsupported HTTP methods. If a backend framework allows simulating a `POST` request via a `GET` request parameter (like `?_method=POST`), an attacker can force the victim's browser to make a top-level `GET` navigation. The browser includes the `Lax` cookie because it's a `GET` request, and the backend processes it as a state-changing `POST` request, bypassing the CSRF protection.
 
-## 🧰 Prerequisites
+##  Prerequisites
 * A target endpoint that performs state-changing actions via `POST`.
 * A backend framework that supports HTTP Method Overriding via URL parameters (e.g., `_method=POST`).
 
-## 🛠️ Step-by-Step Exploitation
+##  Step-by-Step Exploitation
 
 ### Step 1: Verify Method Overriding
 1. Capture a legitimate `POST` request to the target endpoint (e.g., `/my-account/change-email`).
@@ -117,6 +117,48 @@ Many web frameworks support **HTTP Method Overriding** (e.g., using a `_method` 
    ```
 3. Click Store and then Deliver exploit to victim.
 
-4. The lab is successfully solved! 🎉
+4. The lab is successfully solved!
 
 **Key Takeaway / Mitigation**: Never allow state-changing operations to be executed via GET requests, even through framework features like Method Overriding. Backend systems should strictly enforce HTTP verbs and reject requests where the actual transport method (GET) contradicts the intended functional method (POST).
+
+# 8th lab
+
+#  Lab: SameSite Strict bypass via client-side redirect
+**Platform:** PortSwigger Web Security Academy
+**Goal:** Bypass `SameSite=Strict` restrictions to change the victim's email address using a client-side redirect vulnerability.
+**Vulnerability:** CSRF bypassing SameSite=Strict + Client-Side Open Redirect + Improper Method Validation.
+
+## The Concept (The "Trojan Horse" Bypass)
+The `SameSite=Strict` cookie attribute instructs the browser to never send the cookie in cross-site requests, effectively blocking standard CSRF attacks regardless of the HTTP method. 
+However, if an attacker can find a client-side redirect vulnerability (where JavaScript on the target site reads a URL parameter and redirects the user via `window.location`), they can use the target application as a proxy. The attacker induces the victim to visit the vulnerable redirect endpoint. The initial cross-site request is sent without cookies. But when the target site's own JavaScript executes the redirect to the sensitive endpoint, the browser considers this a same-site navigation initiated by the application itself, and attaches the `Strict` cookies.
+
+##  Prerequisites
+* A sensitive state-changing endpoint that accepts `GET` requests (either directly or via method overriding).
+* A client-side redirect vulnerability on the same domain that allows controlling the redirect destination path.
+
+##  Step-by-Step Exploitation
+
+### Step 1: Identify the Gadget (Client-Side Redirect)
+1. Post a comment on any blog post and observe the redirection flow. 
+2. The user is sent to `/post/comment/confirmation?postId=x`, which waits a few seconds and uses JavaScript to redirect the user to `/post/x`.
+3. This is a client-side redirect where the destination is dynamically constructed from the `postId` query parameter.
+
+### Step 2: Craft the Traversal Payload
+1. We must redirect the user to the email change endpoint: `/my-account/change-email?email=hacker@evil.com&submit=1`.
+2. By using directory traversal in the `postId` parameter, we can escape the `/post/` directory constraint:
+   `1/../../my-account/change-email?email=hacker@evil.com%26submit=1`
+   *(Note: The `&` character must be URL-encoded as `%26` so it isn't parsed as a separate parameter for the initial confirmation endpoint).*
+
+### Step 3: Build the Exploit
+1. Navigate to the Exploit Server.
+2. Craft an HTML page with JavaScript that forces the victim's browser to navigate to the vulnerable confirmation endpoint containing our traversal payload.
+   ```html
+   <script>
+       document.location = "[https://YOUR-LAB-ID.web-security-academy.net/post/comment/confirmation?postId=1/../../my-account/change-email?email=hacker@evil.com%26submit=1](https://YOUR-LAB-ID.web-security-academy.net/post/comment/confirmation?postId=1/../../my-account/change-email?email=hacker@evil.com%26submit=1)";
+   </script>
+   ```
+3. Click Store and then Deliver exploit to victim.
+
+4. The lab is successfully solved! 
+
+**Key Takeaway / Mitigation**: To mitigate this, developers must properly sanitize inputs used in client-side redirects (preventing path traversal). More importantly, sensitive state-changing actions must never accept GET requests, rendering client-side GET redirects useless for CSRF.
