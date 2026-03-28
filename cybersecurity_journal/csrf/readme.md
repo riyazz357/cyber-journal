@@ -162,3 +162,57 @@ However, if an attacker can find a client-side redirect vulnerability (where Jav
 4. The lab is successfully solved! 
 
 **Key Takeaway / Mitigation**: To mitigate this, developers must properly sanitize inputs used in client-side redirects (preventing path traversal). More importantly, sensitive state-changing actions must never accept GET requests, rendering client-side GET redirects useless for CSRF.
+
+
+# 7th lab
+
+#  Lab: SameSite Lax bypass via cookie refresh
+**Platform:** PortSwigger Web Security Academy
+**Goal:** Bypass `SameSite=Lax` restrictions to change the victim's email address by exploiting the browser's 2-minute cookie age exception.
+**Vulnerability:** CSRF bypassing SameSite=Lax via Cookie Refresh (Browser quirk/exception).
+
+## The Concept (The 2-Minute Window)
+By default, modern browsers enforce `SameSite=Lax` on cookies, preventing them from being sent in cross-site `POST` requests. However, to prevent breaking Single Sign-On (SSO) mechanisms (like OAuth/SAML) where the Identity Provider redirects the user back to the application via a cross-site POST request, browsers like Chrome introduced a temporary exception: 
+**If a cookie is less than 2 minutes old, the browser will NOT enforce the `Lax` restriction on top-level cross-site `POST` requests.** If an application has an endpoint (like `/social-login`) that refreshes the session cookie without requiring user interaction (if they are already authenticated), an attacker can force the victim to visit this endpoint to get a "fresh" cookie. Within the next 2 minutes, the attacker can successfully execute a standard cross-site CSRF `POST` attack, and the browser will attach the session cookie.
+
+##  Prerequisites
+* A target endpoint vulnerable to CSRF via `POST`.
+* An endpoint that refreshes/re-issues the user's session cookie without requiring interaction (e.g., an OAuth `/social-login` flow that auto-redirects authenticated users).
+* The ability to open pop-ups or trigger top-level navigations from the exploit server.
+
+## Step-by-Step Exploitation
+
+### Step 1: Identify the Refresh Endpoint
+1. Observe the application's login flow.
+2. Note that clicking "Social login" (or similar) hits an endpoint like `/social-login` and assigns a newly minted session cookie upon redirection back to the site.
+
+### Step 2: Build the Exploit
+1. Navigate to the Exploit Server.
+2. Craft an HTML payload that performs two actions:
+   * First, it opens a new window/tab to the cookie refresh endpoint (`/social-login`). This gives the victim a fresh cookie (age < 2 minutes).
+   * Second, it waits for a short duration (e.g., 5 seconds to ensure the new cookie is set) and then auto-submits a CSRF `POST` form to the sensitive endpoint.
+3. **Payload:**
+   ```html
+   <form action="[https://YOUR-LAB-ID.web-security-academy.net/my-account/change-email](https://YOUR-LAB-ID.web-security-academy.net/my-account/change-email)" method="POST" id="csrf-form">
+       <input type="hidden" name="email" value="hacker@evil.com">
+   </form>
+
+   <script>
+       // Trigger top-level navigation to refresh the session cookie
+       window.open('[https://YOUR-LAB-ID.web-security-academy.net/social-login](https://YOUR-LAB-ID.web-security-academy.net/social-login)', 'refresh_window');
+
+       // Wait 5 seconds for the cookie to be refreshed, then fire the POST request
+       setTimeout(function() {
+           document.getElementById('csrf-form').submit();
+       }, 5000);
+   </script>
+   ```
+
+### Step 3: Execute the Takedown
+1. Click Store and then Deliver exploit to victim.
+
+2. The victim bot visits the exploit, the popup refreshes their cookie, and 5 seconds later, the CSRF payload executes successfully within the 2-minute exception window.
+
+3. The lab is successfully solved! 
+
+**Key Takeaway / Mitigation**: This highlights why SameSite attributes are a "defense-in-depth" mechanism, not a silver bullet. Browsers have quirks and exceptions. Applications must still implement robust, cryptographically secure Anti-CSRF tokens for all state-changing operations, regardless of cookie attributes.
