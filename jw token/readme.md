@@ -1,8 +1,4 @@
-# Comprehensive Technical Guide to
-
-# JSON Web Tokens (JWT): Architecture,
-
-# Exploitation, and Defensive Engineering
+# Comprehensive Technical Guide to JSON Web Tokens (JWT): Architecture,  Exploitation, and Defensive Engineering
 
 ## 1. Architectural Overview of JSON Web Tokens
 
